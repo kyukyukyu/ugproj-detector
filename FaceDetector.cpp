@@ -126,13 +126,21 @@ bool parseOptions(int argc, const char** argv,
 }
 
 void detectFaces(Mat& frame, vector<Rect>& faces, const float scale) {
+    const static Scalar lowerBound(0, 133, 77);
+    const static Scalar upperBound(255, 173, 127);
+    Mat ycrcb;
+    Mat mask;
     Mat gray;
     Mat smallImg(cvRound(frame.rows / scale),
                  cvRound(frame.cols / scale),
                  CV_8UC1);
 
+    cvtColor(frame, ycrcb, CV_BGR2YCrCb);
+    inRange(ycrcb, lowerBound, upperBound, mask);
+
     cvtColor(frame, gray, COLOR_BGR2GRAY);
     equalizeHist(gray, gray);
+    gray &= mask;
     resize(gray, smallImg, smallImg.size());
 
     vector<Rect> facesInGray;
