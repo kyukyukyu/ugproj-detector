@@ -140,6 +140,7 @@ void detectFaces(Mat& frame, vector<Rect>& faces, const float scale) {
 
     cvtColor(frame, gray, COLOR_BGR2GRAY);
     equalizeHist(gray, gray);
+    gray &= mask;
     resize(gray, smallImg, smallImg.size());
 
     vector<Rect> facesInGray;
