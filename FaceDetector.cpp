@@ -1,5 +1,6 @@
 #include <opencv2/opencv.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/program_options.hpp>
 
 #include <cstdio>
 #include <string>
@@ -8,21 +9,20 @@
 using namespace std;
 using namespace cv;
 namespace fs = boost::filesystem;
+namespace po = boost::program_options;
 
 static CascadeClassifier cascade;
+bool parseOptions(int argc, const char** argv,
+        string& videoFilename, string& cascadeFilename, string& outputDir);
 void detectFaces(Mat& frame, vector<Rect>& faces, const float scale=1.0);
 void drawRect(Mat& frame, int id, Rect& facePosition);
 
 int main(int argc, const char** argv) {
-    if (argc != 4) {
-        printf("Usage: FaceDetector <video_filename> "
-                "<cascade_filename> <output_dir> \n");
-        return -1;
-    }
-
-    const char* videoFilename = argv[1];
-    const char* cascadeFilename = argv[2];
-    const char* outputDir = argv[3];
+    string videoFilename, cascadeFilename, outputDir;
+    bool parsed =
+        parseOptions(argc, argv, videoFilename, cascadeFilename, outputDir);
+    if (!parsed)
+        return 1;
 
     VideoCapture cap(videoFilename);
     if (!cap.isOpened())
@@ -68,6 +68,41 @@ int main(int argc, const char** argv) {
     }
 
     return 0;
+}
+
+bool parseOptions(int argc, const char** argv,
+        string& videoFilename, string& cascadeFilename, string& outputDir) {
+    try {
+        po::options_description desc("Allowed options");
+        desc.add_options()
+            ("help", "produce help message.")
+            ("video-file,v",
+             po::value<string>(&videoFilename)->required(),
+             "path to input video file.")
+            ("cascade-classifier,c",
+             po::value<string>(&cascadeFilename)->required(),
+             "path to cascade classifier file.")
+            ("output-dir,o",
+             po::value<string>(&outputDir)->default_value("output"),
+             "path to output directory.")
+        ;
+
+        po::variables_map vm;
+        po::store(po::parse_command_line(argc, argv, desc), vm);
+        if (vm.count("help")) {
+            cout << desc << '\n';
+            return false;
+        }
+        po::notify(vm);
+    } catch (std::exception& e) {
+        std::cerr << "Error: " << e.what() << '\n';
+        return false;
+    } catch (...) {
+        std::cerr << "Unknown error!\n";
+        return false;
+    }
+
+    return true;
 }
 
 void detectFaces(Mat& frame, vector<Rect>& faces, const float scale) {

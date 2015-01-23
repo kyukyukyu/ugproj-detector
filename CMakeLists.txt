@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 2.8)
 project(UndergraduateProj)
 find_package(OpenCV REQUIRED)
-find_package(Boost COMPONENTS system filesystem REQUIRED)
+find_package(Boost
+    COMPONENTS system filesystem program_options
+    REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 add_executable(FaceDetector FaceDetector.cpp)
