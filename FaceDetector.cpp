@@ -140,7 +140,6 @@ void detectFaces(Mat& frame, vector<Rect>& faces, const float scale) {
 
     cvtColor(frame, gray, COLOR_BGR2GRAY);
     equalizeHist(gray, gray);
-    gray &= mask;
     resize(gray, smallImg, smallImg.size());
 
     vector<Rect> facesInGray;
@@ -155,8 +154,17 @@ void detectFaces(Mat& frame, vector<Rect>& faces, const float scale) {
     for (vector<Rect>::const_iterator r = facesInGray.begin();
          r != facesInGray.end();
          ++r) {
-        Rect new_r(r->x * scale, r->y * scale,
-                   r->width * scale, r->height * scale);
+        int sourceX = r->x * scale;
+        int sourceY = r->y * scale;
+        int sourceWidth = r->width * scale;
+        int sourceHeight = r->height * scale;
+        Mat croppedMask(mask,
+                Range(sourceY, sourceY + sourceHeight),
+                Range(sourceX, sourceX + sourceWidth));
+        double m = norm( mean(croppedMask) );
+        if (m/256 - 0.8 < 0.000001)
+            continue;
+        Rect new_r(sourceX, sourceY, sourceWidth, sourceHeight);
         faces.push_back(new_r);
     }
 }
