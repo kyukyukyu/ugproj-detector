@@ -47,7 +47,7 @@ int main(int argc, const char** argv) {
         vector<Rect> faces;
         // detect position of faces here
         detectFaces(frame, faces);
-        printf("Found %d faces.\n", faces.size());
+        printf("Found %lu faces.\n", faces.size());
 
         printf("Drawing rectangles on detected faces... ");
         // draw rectangles here
@@ -98,11 +98,27 @@ void detectFaces(Mat& frame, vector<Rect>& faces, const float scale) {
     }
 }
 
+Scalar colorPreset[] = {
+    CV_RGB(0, 255, 0),
+    CV_RGB(255, 0, 0),
+    CV_RGB(0, 0, 255),
+    CV_RGB(255, 255, 0),
+    CV_RGB(255, 0, 255),
+    CV_RGB(0, 255, 255)
+};
+
 void drawRect(Mat& frame, int id, Rect& facePosition) {
+    Scalar color = colorPreset[id % (sizeof(colorPreset) / sizeof(Scalar))];
     rectangle(frame,
               cvPoint(facePosition.x, facePosition.y),
               cvPoint(
                 facePosition.x + facePosition.width - 1,
                 facePosition.y + facePosition.height - 1),
-              CV_RGB(0, 255, 0));
+              color);
+    putText(frame,
+            to_string(id),
+            cvPoint(facePosition.x + 4, facePosition.y + 4),
+            FONT_HERSHEY_PLAIN,
+            1.0,
+            color);
 }
