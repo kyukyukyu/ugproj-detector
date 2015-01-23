@@ -13,14 +13,22 @@ namespace po = boost::program_options;
 
 static CascadeClassifier cascade;
 bool parseOptions(int argc, const char** argv,
-        string& videoFilename, string& cascadeFilename, string& outputDir);
+        string& videoFilename, string& cascadeFilename, string& outputDir,
+        double& targetFps);
 void detectFaces(Mat& frame, vector<Rect>& faces, const float scale=1.0);
 void drawRect(Mat& frame, int id, Rect& facePosition);
 
 int main(int argc, const char** argv) {
     string videoFilename, cascadeFilename, outputDir;
+    double targetFps;
     bool parsed =
-        parseOptions(argc, argv, videoFilename, cascadeFilename, outputDir);
+        parseOptions(
+                argc,
+                argv,
+                videoFilename,
+                cascadeFilename,
+                outputDir,
+                targetFps);
     if (!parsed)
         return 1;
 
@@ -33,17 +41,25 @@ int main(int argc, const char** argv) {
     if (!fs::is_directory(outputPath) && !fs::create_directory(outputPath))
         return -1;
 
+    double sourceFps = cap.get(CV_CAP_PROP_FPS);
+
     char filename[100];
     fs::path filepath;
-    int pos = 0;
+    unsigned long pos = 0;
+    unsigned long frameCount = cap.get(CV_CAP_PROP_FRAME_COUNT);
     Mat frame;
 
-    while (1) {
+    while (pos < frameCount) {
+        if (fmod(pos, sourceFps / targetFps) - 1.0 >= 0.0001) {
+            ++pos;
+            continue;
+        }
+        cap.set(CV_CAP_PROP_POS_FRAMES, (double) pos);
         cap >> frame;
         if (frame.empty())
             break;
 
-        printf("Detecting faces in frame #%d... ", pos);
+        printf("Detecting faces in frame #%lu... ", pos);
         vector<Rect> faces;
         // detect position of faces here
         detectFaces(frame, faces);
@@ -57,9 +73,9 @@ int main(int argc, const char** argv) {
             drawRect(frame, i, faces[i]);
         printf("done.\n");
 
-        printf("Writing frame #%d... ", pos);
+        printf("Writing frame #%lu... ", pos);
 
-        sprintf(filename, "%.3d.jpg", pos);
+        sprintf(filename, "%.3lu.jpg", pos);
         filepath = outputPath / fs::path(filename);
         imwrite(filepath.native(), frame);
 
@@ -71,7 +87,8 @@ int main(int argc, const char** argv) {
 }
 
 bool parseOptions(int argc, const char** argv,
-        string& videoFilename, string& cascadeFilename, string& outputDir) {
+        string& videoFilename, string& cascadeFilename, string& outputDir,
+        double& targetFps) {
     try {
         po::options_description desc("Allowed options");
         desc.add_options()
@@ -85,6 +102,9 @@ bool parseOptions(int argc, const char** argv,
             ("output-dir,o",
              po::value<string>(&outputDir)->default_value("output"),
              "path to output directory.")
+            ("target-fps,f",
+             po::value<double>(&targetFps)->default_value(10.0),
+             "fps at which video will be scanned.")
         ;
 
         po::variables_map vm;
