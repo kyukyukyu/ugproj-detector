@@ -3,6 +3,7 @@
 #include <boost/program_options.hpp>
 
 #include <cstdio>
+#include <cmath>
 #include <string>
 #include <vector>
 

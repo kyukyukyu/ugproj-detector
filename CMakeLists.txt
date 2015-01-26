@@ -1,3 +1,4 @@
+list(APPEND project_SRCS "main.cpp")
 cmake_minimum_required(VERSION 2.8)
 project(UndergraduateProj)
 find_package(OpenCV REQUIRED)
@@ -6,6 +7,6 @@ find_package(Boost
     REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
-add_executable(FaceDetector FaceDetector.cpp)
+add_executable(FaceDetector ${project_SRCS})
 target_link_libraries(FaceDetector ${OpenCV_LIBS})
 target_link_libraries(FaceDetector ${Boost_LIBRARIES})
