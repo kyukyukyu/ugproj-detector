@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cmath>
 #include <string>
+#include <limits>
 #include <utility>
 #include <vector>
 
@@ -29,6 +30,7 @@ fc_pair_v::~fc_pair_v() {
 
 static CascadeClassifier cascade;
 static vector<Face> faces;
+static const double DOUBLE_EPSILON = numeric_limits<double>::epsilon();
 
 bool parseOptions(int argc, const char** argv,
         string& videoFilename, string& cascadeFilename, string& outputDir,
@@ -75,7 +77,7 @@ int main(int argc, const char** argv) {
 
     while (pos < frameCount) {
         cap.grab();     // grab next frame
-        if (fmod(pos, sourceFps / targetFps) - 1.0 >= 0.0001) {
+        if (fmod(pos, sourceFps / targetFps) - 1.0 > -DOUBLE_EPSILON) {
             ++pos;
             continue;
         }
@@ -233,7 +235,7 @@ void detectFaces(Mat& frame, vector<Rect>& rects, const float scale) {
                 Range(sourceY, sourceY + sourceHeight),
                 Range(sourceX, sourceX + sourceWidth));
         double m = norm( mean(croppedMask) );
-        if (m/256 - 0.8 < 0.000001)
+        if (m/256 < 0.8)
             continue;
         Rect new_r(sourceX, sourceY, sourceWidth, sourceHeight);
         rects.push_back(new_r);
