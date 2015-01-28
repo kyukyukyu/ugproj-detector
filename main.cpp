@@ -15,7 +15,17 @@ using namespace cv;
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
 
-typedef pair<Face::id_type, FaceCandidate&> fc_pair;
+typedef pair<Face::id_type, FaceCandidate*> fc_pair;
+class fc_pair_v : public vector<fc_pair> {
+    public:
+        ~fc_pair_v();
+};
+fc_pair_v::~fc_pair_v() {
+    for (fc_pair_v::iterator it = this->begin();
+         it != this->end();
+         ++it)
+        delete it->second;
+}
 
 static CascadeClassifier cascade;
 static vector<Face> faces;
@@ -24,7 +34,7 @@ bool parseOptions(int argc, const char** argv,
         string& videoFilename, string& cascadeFilename, string& outputDir,
         double& targetFps);
 void detectFaces(Mat& frame, vector<Rect>& rects, const float scale=1.0);
-void associate(vector<fc_pair>& prev, vector<fc_pair>& next,
+void associate(fc_pair_v& prev, fc_pair_v& next,
         double threshold=0.5);
 void drawRect(Mat& frame, Face::id_type id, const Rect& facePosition);
 
@@ -59,7 +69,7 @@ int main(int argc, const char** argv) {
     unsigned long frameCount = cap.get(CV_CAP_PROP_FRAME_COUNT);
     Mat frame;
 
-    vector<fc_pair> *prevCandidates = NULL, *currCandidates = NULL;
+    fc_pair_v *prevCandidates = NULL, *currCandidates = NULL;
 
     while (pos < frameCount) {
         if (fmod(pos, sourceFps / targetFps) - 1.0 >= 0.0001) {
@@ -79,12 +89,13 @@ int main(int argc, const char** argv) {
         if (prevCandidates != NULL)
             delete prevCandidates;
         prevCandidates = currCandidates;
-        currCandidates = new vector<fc_pair>();
+        currCandidates = new fc_pair_v();
         for (vector<Rect>::const_iterator it = rects.begin();
              it != rects.end();
              ++it) {
             Mat cddImage(frame, *it);
-            FaceCandidate cdd(pos, *it, cddImage);
+            // dynamically allocate cdd to handle multiple candidates
+            FaceCandidate* cdd = new FaceCandidate(pos, *it, cddImage);
             currCandidates->push_back(fc_pair(0, cdd));
         }
         printf("Found %lu faces.\n", currCandidates->size());
@@ -100,26 +111,25 @@ int main(int argc, const char** argv) {
             printf("No candidate for previous frame: add all candidates as "
                    "new faces.\n");
 add_all:
-            for (vector<fc_pair>::iterator it = currCandidates->begin();
+            for (fc_pair_v::iterator it = currCandidates->begin();
                  it != currCandidates->end();
                  ++it) {
                 Face::id_type faceId = faces.size();
                 it->first = faceId;
-                faces.push_back(Face(faceId, it->second));
+                faces.push_back(Face(faceId, *(it->second)));
             }
         } else {
             printf("Performing association for faces... ");
-            printf("prevCandidates = %p, currCandidates = %p", prevCandidates, currCandidates);
             associate(*prevCandidates, *currCandidates);
             printf("done.\n");
         }
 
         printf("Drawing rectangles on detected faces... ");
         // draw rectangles here
-        for (vector<fc_pair>::const_iterator it = currCandidates->begin();
+        for (fc_pair_v::const_iterator it = currCandidates->begin();
              it != currCandidates->end();
              ++it)
-            drawRect(frame, it->first, (it->second).rect);
+            drawRect(frame, it->first, it->second->rect);
         printf("done.\n");
 
         printf("Writing frame #%lu... ", pos);
@@ -131,6 +141,9 @@ add_all:
         printf("done.\n");
         ++pos;
     }
+
+    delete prevCandidates;
+    delete currCandidates;
 
     return 0;
 }
@@ -219,9 +232,9 @@ void detectFaces(Mat& frame, vector<Rect>& rects, const float scale) {
     }
 }
 
-void associate(vector<fc_pair>& prev, vector<fc_pair>& next,
+void associate(fc_pair_v& prev, fc_pair_v& next,
         double threshold) {
-    typedef vector<fc_pair>::size_type size_type;
+    typedef fc_pair_v::size_type size_type;
 
     const size_type
         prevSize = prev.size(), nextSize = next.size();
@@ -234,16 +247,14 @@ void associate(vector<fc_pair>& prev, vector<fc_pair>& next,
 
     // calculate probability
     for (size_type i = 0; i < prevSize; ++i) {
-        const Rect& rectI = prev[i].second.rect;
+        const Rect& rectI = prev[i].second->rect;
         for (size_type j = 0; j < nextSize; ++j) {
-            const Rect& rectJ = next[j].second.rect;
+            const Rect& rectJ = next[j].second->rect;
             Rect intersect = rectI & rectJ;
             int intersectArea = intersect.area();
             int unionArea =
                 rectI.area() + rectJ.area() - intersectArea;
             prob[i][j] = (double)intersectArea / unionArea;
-            printf("intersectArea = %d, unionArea = %d\n", intersectArea, unionArea);
-            printf("prob[%d][%d] = %f;\n", i, j, prob[i][j]);
         }
     }
 
@@ -259,8 +270,6 @@ void associate(vector<fc_pair>& prev, vector<fc_pair>& next,
             }
         }
 
-        printf("prob[%d][%d] = %f;\n", maxRow, j, max);
-
         vector<Face>::size_type faceId;
         if (max > 0) {
             faceId = prev[maxRow].first;
@@ -269,7 +278,7 @@ void associate(vector<fc_pair>& prev, vector<fc_pair>& next,
             faces.push_back(Face(faceId));
         }
         next[j].first = faceId;
-        faces[faceId].addCandidate(next[j].second);
+        faces[faceId].addCandidate(*(next[j].second));
     }
 
     // array deallocation
