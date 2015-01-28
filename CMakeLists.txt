@@ -1,3 +1,5 @@
+list(APPEND project_SRCS "structure.hpp")
+list(APPEND project_SRCS "structure.cpp")
 list(APPEND project_SRCS "main.cpp")
 cmake_minimum_required(VERSION 2.8)
 project(UndergraduateProj)
