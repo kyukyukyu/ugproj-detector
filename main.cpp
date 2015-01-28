@@ -32,15 +32,15 @@ static vector<Face> faces;
 
 bool parseOptions(int argc, const char** argv,
         string& videoFilename, string& cascadeFilename, string& outputDir,
-        double& targetFps);
-void detectFaces(Mat& frame, vector<Rect>& rects, const float scale=1.0);
+        double& targetFps, double& detectionScale, double& associationThreshold);
+void detectFaces(Mat& frame, vector<Rect>& rects, const float scale);
 void associate(fc_pair_v& prev, fc_pair_v& next,
-        double threshold=0.5);
+        double threshold);
 void drawRect(Mat& frame, Face::id_type id, const Rect& facePosition);
 
 int main(int argc, const char** argv) {
     string videoFilename, cascadeFilename, outputDir;
-    double targetFps;
+    double targetFps, detectionScale, associationThreshold;
     bool parsed =
         parseOptions(
                 argc,
@@ -48,7 +48,9 @@ int main(int argc, const char** argv) {
                 videoFilename,
                 cascadeFilename,
                 outputDir,
-                targetFps);
+                targetFps,
+                detectionScale,
+                associationThreshold);
     if (!parsed)
         return 1;
 
@@ -84,7 +86,7 @@ int main(int argc, const char** argv) {
         printf("Detecting faces in frame #%lu... ", pos);
         // detect position of faces here
         vector<Rect> rects;
-        detectFaces(frame, rects);
+        detectFaces(frame, rects, detectionScale);
 
         if (prevCandidates != NULL)
             delete prevCandidates;
@@ -120,7 +122,7 @@ add_all:
             }
         } else {
             printf("Performing association for faces... ");
-            associate(*prevCandidates, *currCandidates);
+            associate(*prevCandidates, *currCandidates, associationThreshold);
             printf("done.\n");
         }
 
@@ -150,7 +152,7 @@ add_all:
 
 bool parseOptions(int argc, const char** argv,
         string& videoFilename, string& cascadeFilename, string& outputDir,
-        double& targetFps) {
+        double& targetFps, double& detectionScale, double& associationThreshold) {
     try {
         po::options_description desc("Allowed options");
         desc.add_options()
@@ -167,6 +169,12 @@ bool parseOptions(int argc, const char** argv,
             ("target-fps,f",
              po::value<double>(&targetFps)->default_value(10.0),
              "fps at which video will be scanned.")
+            ("detection-scale,s",
+             po::value<double>(&detectionScale)->default_value(1.0),
+             "scale at which image will be transformed during detection.")
+            ("association-threshold,a",
+             po::value<double>(&associationThreshold)->default_value(0.5),
+             "threshold for probability used during association.")
         ;
 
         po::variables_map vm;
