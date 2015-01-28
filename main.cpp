@@ -72,12 +72,12 @@ int main(int argc, const char** argv) {
     fc_pair_v *prevCandidates = NULL, *currCandidates = NULL;
 
     while (pos < frameCount) {
+        cap.grab();     // grab next frame
         if (fmod(pos, sourceFps / targetFps) - 1.0 >= 0.0001) {
             ++pos;
             continue;
         }
-        cap.set(CV_CAP_PROP_POS_FRAMES, (double) pos);
-        cap >> frame;
+        cap.retrieve(frame);
         if (frame.empty())
             break;
 
