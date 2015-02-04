@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 2.8)
 project(UndergraduateProj)
 
 # Add custom module path
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/share/cmake/Modules/cmake-modules/")
 
 find_package(OpenCV REQUIRED)
 find_package(Boost
