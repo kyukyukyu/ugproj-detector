@@ -16,6 +16,12 @@ find_package(Boost
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 
+# Load celiu-optflow library
+add_subdirectory(src/celiu-optflow)
+
 add_executable(FaceDetector ${project_SRCS})
 target_link_libraries(FaceDetector ${OpenCV_LIBS})
 target_link_libraries(FaceDetector ${Boost_LIBRARIES})
+target_link_libraries(FaceDetector celiu_optflow)
+
+install(TARGETS FaceDetector DESTINATION bin)
