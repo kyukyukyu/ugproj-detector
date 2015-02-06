@@ -15,11 +15,15 @@ project(celiu_optflow_lib)
 add_library(celiu_optflow ${Celiu_Optflow_SRCS})
 
 find_package(Glog REQUIRED)
-include_directories(${GLOG_INCLUDE_DIRS})
 find_package(PNG REQUIRED)
-include_directories(${PNG_INCLUDE_DIRS})
 find_package(Eigen REQUIRED)
-include_directories(${EIGEN_INCLUDE_DIRS})
+set(Dependencies_INCLUDE_DIRS
+    ${GLOG_INCLUDE_DIRS}
+    ${PNG_INCLUDE_DIRS}
+    ${EIGEN_INCLUDE_DIRS}
+)
+include_directories(${Dependencies_INCLUDE_DIRS})
+set(Celiu_Optflow_Dependencies_INCLUDE_DIRS ${Dependencies_INCLUDE_DIRS} PARENT_SCOPE)
 
 target_link_libraries(celiu_optflow ${GLOG_LIBRARIES})
 target_link_libraries(celiu_optflow ${PNG_LIBRARY})

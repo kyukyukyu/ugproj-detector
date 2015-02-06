@@ -1,10 +1,10 @@
-# Register source files
-list(APPEND project_SRCS "structure.hpp")
-list(APPEND project_SRCS "structure.cpp")
-list(APPEND project_SRCS "main.cpp")
-
 cmake_minimum_required(VERSION 2.8)
 project(UndergraduateProj)
+
+# Project Output Paths
+SET (MAINFOLDER ${PROJECT_SOURCE_DIR})
+SET (EXECUTABLE_OUTPUT_PATH "${MAINFOLDER}/bin")
+SET (LIBRARY_OUTPUT_PATH "${MAINFOLDER}/lib")
 
 # Add custom module path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/share/cmake/Modules/cmake-modules/")
@@ -16,12 +16,4 @@ find_package(Boost
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 
-# Load celiu-optflow library
-add_subdirectory(src/celiu-optflow)
-
-add_executable(FaceDetector ${project_SRCS})
-target_link_libraries(FaceDetector ${OpenCV_LIBS})
-target_link_libraries(FaceDetector ${Boost_LIBRARIES})
-target_link_libraries(FaceDetector celiu_optflow)
-
-install(TARGETS FaceDetector DESTINATION bin)
+add_subdirectory(src)
