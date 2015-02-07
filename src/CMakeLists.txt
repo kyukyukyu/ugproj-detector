@@ -1,6 +1,10 @@
 # Register source files
 list(APPEND project_SRCS "structure.hpp")
 list(APPEND project_SRCS "structure.cpp")
+list(APPEND project_SRCS "optflow/flow_to_color.hpp")
+list(APPEND project_SRCS "optflow/flow_to_color.cpp")
+list(APPEND project_SRCS "optflow/colorcode.h")
+list(APPEND project_SRCS "optflow/colorcode.cpp")
 list(APPEND project_SRCS "main.cpp")
 set(project_LIBS ${Boost_LIBRARIES} ${OpenCV_LIBS} celiu_optflow)
 set(project_BIN ${PROJECT_NAME})
