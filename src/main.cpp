@@ -1,4 +1,6 @@
+#include <Eigen/Dense>
 #include <opencv2/opencv.hpp>
+#include <opencv2/core/eigen.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
@@ -10,6 +12,8 @@
 #include <vector>
 
 #include "structure.hpp"
+#include "celiu-optflow/optical_flow.h"
+#include "optflow/flow_to_color.hpp"
 
 using namespace std;
 using namespace cv;
@@ -36,8 +40,14 @@ bool parseOptions(int argc, const char** argv,
         string& videoFilename, string& cascadeFilename, string& outputDir,
         double& targetFps, double& detectionScale, double& associationThreshold);
 void detectFaces(Mat& frame, vector<Rect>& rects, const float scale);
-void associate(fc_pair_v& prev, fc_pair_v& next,
+void associate(fc_pair_v& prevCandidates, fc_pair_v& nextCandidates,
         double threshold);
+void associate(fc_pair_v& prevCandidates,
+               fc_pair_v& nextCandidates,
+               Mat& prevFrame,
+               Mat& nextFrame,
+               double threshold,
+               Mat* flowImg=nullptr);
 void drawRect(Mat& frame, Face::id_type id, const Rect& facePosition);
 
 int main(int argc, const char** argv) {
@@ -71,7 +81,9 @@ int main(int argc, const char** argv) {
     fs::path filepath;
     unsigned long pos = 0;
     unsigned long frameCount = cap.get(CV_CAP_PROP_FRAME_COUNT);
-    Mat frame;
+    Mat frame, prevFrame;
+    Mat flowImg;
+    bool isAssociated = false;
 
     fc_pair_v *prevCandidates = NULL, *currCandidates = NULL;
 
@@ -122,9 +134,18 @@ add_all:
                 it->first = faceId;
                 faces.push_back(Face(faceId, *(it->second)));
             }
+            // for the first association since now
+            frame.copyTo(prevFrame);
+            isAssociated = false;
         } else {
             printf("Performing association for faces... ");
-            associate(*prevCandidates, *currCandidates, associationThreshold);
+            associate(*prevCandidates,
+                      *currCandidates,
+                      prevFrame,
+                      frame,
+                      associationThreshold,
+                      &flowImg);
+            isAssociated = true;
             printf("done.\n");
         }
 
@@ -141,6 +162,12 @@ add_all:
         sprintf(filename, "%.3lu.jpg", pos);
         filepath = outputPath / fs::path(filename);
         imwrite(filepath.native(), frame);
+
+        if (isAssociated) {
+            sprintf(filename, "optflow_%.3lu.jpg", pos);
+            filepath = outputPath / fs::path(filename);
+            imwrite(filepath.native(), flowImg);
+        }
 
         printf("done.\n");
         ++pos;
@@ -242,33 +269,24 @@ void detectFaces(Mat& frame, vector<Rect>& rects, const float scale) {
     }
 }
 
-void associate(fc_pair_v& prev, fc_pair_v& next,
-        double threshold) {
+double** allocProbArray(fc_pair_v::size_type row, fc_pair_v::size_type col) {
+    double **prob;
+    // array allocation
+    prob = new double *[row];
+    for (fc_pair_v::size_type i = 0; i < row; ++i)
+        prob[i] = new double[col];
+    return prob;
+}
+
+void matchCandidates(double** prob,
+                     fc_pair_v& prevCandidates,
+                     fc_pair_v& nextCandidates,
+                     double threshold) {
     typedef fc_pair_v::size_type size_type;
 
     const size_type
-        prevSize = prev.size(), nextSize = next.size();
+        prevSize = prevCandidates.size(), nextSize = nextCandidates.size();
 
-    double **prob;
-    // array allocation
-    prob = new double *[prevSize];
-    for (size_type i = 0; i < prevSize; ++i)
-        prob[i] = new double[nextSize];
-
-    // calculate probability
-    for (size_type i = 0; i < prevSize; ++i) {
-        const Rect& rectI = prev[i].second->rect;
-        for (size_type j = 0; j < nextSize; ++j) {
-            const Rect& rectJ = next[j].second->rect;
-            Rect intersect = rectI & rectJ;
-            int intersectArea = intersect.area();
-            int unionArea =
-                rectI.area() + rectJ.area() - intersectArea;
-            prob[i][j] = (double)intersectArea / unionArea;
-        }
-    }
-
-    // match candidates by probability
     for (size_type j = 0; j < nextSize; ++j) {
         double max = -1;
         size_type maxRow;
@@ -282,19 +300,112 @@ void associate(fc_pair_v& prev, fc_pair_v& next,
 
         vector<Face>::size_type faceId;
         if (max > 0) {
-            faceId = prev[maxRow].first;
+            faceId = prevCandidates[maxRow].first;
         } else {
             faceId = faces.size();
             faces.push_back(Face(faceId));
         }
-        next[j].first = faceId;
-        faces[faceId].addCandidate(*(next[j].second));
+        nextCandidates[j].first = faceId;
+        faces[faceId].addCandidate(*(nextCandidates[j].second));
     }
+}
 
-    // array deallocation
-    for (size_type i = 0; i < prevSize; ++i)
+void deallocProbArray(double** prob, fc_pair_v::size_type row) {
+    for (fc_pair_v::size_type i = 0; i < row; ++i)
         delete[] prob[i];
     delete[] prob;
+}
+
+void associate(fc_pair_v& prevCandidates, fc_pair_v& nextCandidates,
+        double threshold) {
+    typedef fc_pair_v::size_type size_type;
+
+    const size_type
+        prevSize = prevCandidates.size(), nextSize = nextCandidates.size();
+
+    // array allocation
+    double **prob = allocProbArray(prevSize, nextSize);
+
+    // calculate probability
+    for (size_type i = 0; i < prevSize; ++i) {
+        const Rect& rectI = prevCandidates[i].second->rect;
+        for (size_type j = 0; j < nextSize; ++j) {
+            const Rect& rectJ = nextCandidates[j].second->rect;
+            Rect intersect = rectI & rectJ;
+            int intersectArea = intersect.area();
+            int unionArea =
+                rectI.area() + rectJ.area() - intersectArea;
+            prob[i][j] = (double)intersectArea / unionArea;
+        }
+    }
+
+    // match candidates by probability
+    matchCandidates(prob, prevCandidates, nextCandidates, threshold);
+
+    // array deallocation
+    deallocProbArray(prob, prevSize);
+}
+
+void associate(fc_pair_v& prevCandidates,
+               fc_pair_v& nextCandidates,
+               Mat& prevFrame,
+               Mat& nextFrame,
+               double threshold,
+               Mat* flowImg) {
+    typedef fc_pair_v::size_type size_type;
+
+    const size_type
+        prevSize = prevCandidates.size(), nextSize = nextCandidates.size();
+
+    // array allocation
+    double **prob = allocProbArray(prevSize, nextSize);
+
+    // convert images
+    opticalflow::MCImageDoubleX prevImg(prevFrame.cols, prevFrame.rows, prevFrame.channels()),
+                                nextImg(nextFrame.cols, nextFrame.rows, nextFrame.channels());
+    for (int y = 0; y < prevFrame.rows; ++y) {
+        for (int x = 0; x < prevFrame.cols; ++x) {
+            cv::Vec3b prevPixel(prevFrame.at<cv::Vec3b>(y, x)),
+                      nextPixel(nextFrame.at<cv::Vec3b>(y, x));
+            for (int d = 0; d < prevFrame.channels(); ++d) {
+                prevImg(x, y, d) = (double)prevPixel[d] / 255;
+                nextImg(x, y, d) = (double)nextPixel[d] / 255;
+            }
+        }
+    }
+
+    // calculate optical flow
+    opticalflow::MCImageDoubleX vx, vy;
+
+    double alpha = .012, ratio = .75;
+    int minWidth = 40, nOutIter = 7, nInIter = 1, nSORIter = 30;
+
+    opticalflow::MCImageDoubleX warpI2;
+    opticalflow::OpticalFlow::Coarse2FineFlow(vx, vy, warpI2, prevImg, nextImg,
+                                 alpha, ratio, minWidth, nOutIter, nInIter, nSORIter);
+
+    // visualize optical flow
+    if (flowImg != nullptr)
+        ugproj::flowToColor(vx, vy, *flowImg);
+
+    // calculate probability
+    for (size_type i = 0; i < prevSize; ++i) {
+        const Rect& rectI = prevCandidates[i].second->rect;
+        for (size_type j = 0; j < nextSize; ++j) {
+            const Rect& rectJ = nextCandidates[j].second->rect;
+            Rect intersect = rectI & rectJ;
+            int intersectArea = intersect.area();
+            int unionArea =
+            rectI.area() + rectJ.area() - intersectArea;
+            prob[i][j] = (double)intersectArea / unionArea;
+        }
+    }
+
+    // match candidates by probability
+    matchCandidates(prob, prevCandidates, nextCandidates, threshold);
+
+    // array deallocation
+    deallocProbArray(prob, prevSize);
 }
 
 Scalar colorPreset[] = {
