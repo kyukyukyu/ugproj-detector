@@ -134,8 +134,6 @@ add_all:
                 it->first = faceId;
                 faces.push_back(Face(faceId, *(it->second)));
             }
-            // for the first association since now
-            frame.copyTo(prevFrame);
             isAssociated = false;
         } else {
             printf("Performing association for faces... ");
@@ -148,6 +146,11 @@ add_all:
             isAssociated = true;
             printf("done.\n");
         }
+
+        bool isAnyCandidate = currCandidates->size() > 0;
+        if (isAnyCandidate)
+            // set current frame as previous frame for next iteration
+            frame.copyTo(prevFrame);
 
         printf("Drawing rectangles on detected faces... ");
         // draw rectangles here
