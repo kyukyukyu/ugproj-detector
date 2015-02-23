@@ -1,6 +1,8 @@
 # Register source files
 list(APPEND project_SRCS "structure.hpp")
 list(APPEND project_SRCS "structure.cpp")
+list(APPEND project_SRCS "detector/detector.hpp")
+list(APPEND project_SRCS "detector/detector.cpp")
 list(APPEND project_SRCS "optflow/flow_to_color.hpp")
 list(APPEND project_SRCS "optflow/flow_to_color.cpp")
 list(APPEND project_SRCS "optflow/colorcode.h")

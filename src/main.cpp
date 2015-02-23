@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "structure.hpp"
+#include "detector/detector.hpp"
 #include "celiu-optflow/optical_flow.h"
 #include "optflow/flow_to_color.hpp"
 
@@ -33,14 +34,12 @@ fc_pair_v::~fc_pair_v() {
         delete it->second;
 }
 
-static CascadeClassifier cascade;
 static vector<Face> faces;
 static const double DOUBLE_EPSILON = numeric_limits<double>::epsilon();
 
 bool parseOptions(int argc, const char** argv,
         string& videoFilename, string& cascadeFilename, string& outputDir,
         double& targetFps, double& detectionScale, double& associationThreshold);
-void detectFaces(Mat& frame, vector<Rect>& rects, const float scale);
 void associate(fc_pair_v& prevCandidates, fc_pair_v& nextCandidates,
         double threshold);
 void associate(fc_pair_v& prevCandidates,
@@ -70,6 +69,7 @@ int main(int argc, const char** argv) {
     VideoCapture cap(videoFilename);
     if (!cap.isOpened())
         return -1;
+    CascadeClassifier cascade;
     if (!cascade.load(cascadeFilename))
         return -1;
     fs::path outputPath(outputDir);
@@ -86,6 +86,8 @@ int main(int argc, const char** argv) {
     Mat flowImg;
     bool isAssociated = false;
 
+    FaceDetector detector(cascade);
+
     fc_pair_v *prevCandidates = NULL, *currCandidates = NULL;
 
     while (pos < frameCount) {
@@ -101,7 +103,7 @@ int main(int argc, const char** argv) {
         printf("Detecting faces in frame #%lu... ", pos);
         // detect position of faces here
         vector<Rect> rects;
-        detectFaces(frame, rects, detectionScale);
+        detector.detectFaces(frame, rects, detectionScale);
 
         if (prevCandidates != NULL)
             delete prevCandidates;
@@ -226,51 +228,6 @@ bool parseOptions(int argc, const char** argv,
     }
 
     return true;
-}
-
-void detectFaces(Mat& frame, vector<Rect>& rects, const float scale) {
-    const static Scalar lowerBound(0, 133, 77);
-    const static Scalar upperBound(255, 173, 127);
-    Mat ycrcb;
-    Mat mask;
-    Mat gray;
-    Mat smallImg(cvRound(frame.rows * scale),
-                 cvRound(frame.cols * scale),
-                 CV_8UC1);
-
-    cvtColor(frame, ycrcb, CV_BGR2YCrCb);
-    inRange(ycrcb, lowerBound, upperBound, mask);
-
-    cvtColor(frame, gray, COLOR_BGR2GRAY);
-    equalizeHist(gray, gray);
-    gray &= mask;
-    resize(gray, smallImg, smallImg.size());
-
-    vector<Rect> facesInGray;
-    cascade.detectMultiScale(
-            gray,
-            facesInGray,
-            1.1,
-            2,
-            0 | CASCADE_SCALE_IMAGE,
-            Size(30, 30));
-
-    for (vector<Rect>::const_iterator r = facesInGray.begin();
-         r != facesInGray.end();
-         ++r) {
-        int sourceX = r->x / scale;
-        int sourceY = r->y / scale;
-        int sourceWidth = r->width / scale;
-        int sourceHeight = r->height / scale;
-        Mat croppedMask(mask,
-                Range(sourceY, sourceY + sourceHeight),
-                Range(sourceX, sourceX + sourceWidth));
-        double m = norm( mean(croppedMask) );
-        if (m/256 < 0.8)
-            continue;
-        Rect new_r(sourceX, sourceY, sourceWidth, sourceHeight);
-        rects.push_back(new_r);
-    }
 }
 
 double** allocProbArray(fc_pair_v::size_type row, fc_pair_v::size_type col) {
