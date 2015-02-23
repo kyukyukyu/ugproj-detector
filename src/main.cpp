@@ -17,6 +17,7 @@
 
 using namespace std;
 using namespace cv;
+using namespace ugproj;
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
 
@@ -378,7 +379,7 @@ void associate(fc_pair_v& prevCandidates,
     }
 
     // calculate optical flow
-    opticalflow::MCImageDoubleX vx, vy;
+    OpticalFlow vx, vy;
 
     double alpha = .012, ratio = .75;
     int minWidth = 40, nOutIter = 7, nInIter = 1, nSORIter = 30;
