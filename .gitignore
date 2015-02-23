@@ -1,3 +1,5 @@
 sample
+bin
 build*
+lib
 **/.*.swp
