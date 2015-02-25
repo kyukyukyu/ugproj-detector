@@ -11,9 +11,11 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/share/cmak
 
 find_package(OpenCV REQUIRED)
 find_package(Boost
-    COMPONENTS system filesystem program_options
+    COMPONENTS system filesystem program_options math_tr1
     REQUIRED)
+find_package(Eigen REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
+include_directories(${EIGEN_INCLUDE_DIRS})
 
 add_subdirectory(src)
