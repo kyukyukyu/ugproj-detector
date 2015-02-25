@@ -8,7 +8,7 @@
 
 namespace ugproj {
 
-    typedef opticalflow::MCImageDoubleX OpticalFlow;
+    typedef opticalflow::MCImageDoubleX OptFlowArray;
 
     class FaceCandidate {
         public:

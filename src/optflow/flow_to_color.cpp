@@ -13,7 +13,7 @@
 using namespace std;
 using namespace opticalflow;
 
-void ugproj::flowToColor(MCImageDoubleX &vx, MCImageDoubleX &vy,
+void ugproj::flowToColor(ugproj::OptFlowArray& vx, ugproj::OptFlowArray& vy,
                          cv::Mat& img) {
     typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic> ArrayDXX;
 

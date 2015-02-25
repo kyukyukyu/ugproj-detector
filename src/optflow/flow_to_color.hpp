@@ -6,8 +6,8 @@
 #include <opencv2/opencv.hpp>
 
 namespace ugproj {
-    void flowToColor(ugproj::OpticalFlow& vx,
-                     ugproj::OpticalFlow& vy,
+    void flowToColor(ugproj::OptFlowArray& vx,
+                     ugproj::OptFlowArray& vy,
                      cv::Mat& colorMat);
 }
 

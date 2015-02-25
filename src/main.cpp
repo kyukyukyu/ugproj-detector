@@ -48,6 +48,7 @@ void associate(fc_pair_v& prevCandidates,
                Mat& nextFrame,
                double threshold,
                Mat* flowImg=nullptr);
+void calculateOptFlow(Mat& frame1, Mat& frame2, OptFlowArray& vx, OptFlowArray& vy);
 void drawRect(Mat& frame, Face::id_type id, const Rect& facePosition);
 
 int main(int argc, const char** argv) {
@@ -82,11 +83,14 @@ int main(int argc, const char** argv) {
     fs::path filepath;
     unsigned long pos = 0;
     unsigned long frameCount = cap.get(CV_CAP_PROP_FRAME_COUNT);
+    double frameWidth = cap.get(CV_CAP_PROP_FRAME_WIDTH);
+    double frameHeight = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
     Mat frame, prevFrame;
     Mat flowImg;
     bool isAssociated = false;
 
     FaceDetector detector(cascade);
+    OpticalFlowManager flowManager(frameWidth, frameHeight);
 
     fc_pair_v *prevCandidates = NULL, *currCandidates = NULL;
 
@@ -99,6 +103,19 @@ int main(int argc, const char** argv) {
         cap.retrieve(frame);
         if (frame.empty())
             break;
+
+        if (prevCandidates != NULL) {
+            printf("Calculating optical flow between frame #%lu and frame #%lu... ", pos - 1, pos);
+
+            OptFlowArray* vx = new OptFlowArray;
+            OptFlowArray* vy = new OptFlowArray;
+            OpticalFlowManager::flow_t* flow =
+                new OpticalFlowManager::flow_t(vx, vy);
+            calculateOptFlow(prevFrame, frame, *vx, *vy);
+            flowManager.append(flow);
+
+            printf("done.\n");
+        }
 
         printf("Detecting faces in frame #%lu... ", pos);
         // detect position of faces here
@@ -307,28 +324,15 @@ void associate(fc_pair_v& prevCandidates, fc_pair_v& nextCandidates,
     deallocProbArray(prob, prevSize);
 }
 
-void associate(fc_pair_v& prevCandidates,
-               fc_pair_v& nextCandidates,
-               Mat& prevFrame,
-               Mat& nextFrame,
-               double threshold,
-               Mat* flowImg) {
-    typedef fc_pair_v::size_type size_type;
-
-    const size_type
-        prevSize = prevCandidates.size(), nextSize = nextCandidates.size();
-
-    // array allocation
-    double **prob = allocProbArray(prevSize, nextSize);
-
+void calculateOptFlow(Mat& frame1, Mat& frame2, OptFlowArray& vx, OptFlowArray& vy) {
     // convert images
-    opticalflow::MCImageDoubleX prevImg(prevFrame.cols, prevFrame.rows, prevFrame.channels()),
-                                nextImg(nextFrame.cols, nextFrame.rows, nextFrame.channels());
-    for (int y = 0; y < prevFrame.rows; ++y) {
-        for (int x = 0; x < prevFrame.cols; ++x) {
-            cv::Vec3b prevPixel(prevFrame.at<cv::Vec3b>(y, x)),
-                      nextPixel(nextFrame.at<cv::Vec3b>(y, x));
-            for (int d = 0; d < prevFrame.channels(); ++d) {
+    opticalflow::MCImageDoubleX prevImg(frame1.cols, frame1.rows, frame1.channels());
+    opticalflow::MCImageDoubleX nextImg(frame2.cols, frame2.rows, frame2.channels());
+    for (int y = 0; y < frame1.rows; ++y) {
+        for (int x = 0; x < frame1.cols; ++x) {
+            cv::Vec3b prevPixel(frame1.at<cv::Vec3b>(y, x)),
+                      nextPixel(frame2.at<cv::Vec3b>(y, x));
+            for (int d = 0; d < frame1.channels(); ++d) {
                 prevImg(x, y, d) = (double)prevPixel[d] / 255;
                 nextImg(x, y, d) = (double)nextPixel[d] / 255;
             }
@@ -336,37 +340,19 @@ void associate(fc_pair_v& prevCandidates,
     }
 
     // calculate optical flow
-    OpticalFlow vx, vy;
-
-    double alpha = .012, ratio = .75;
-    int minWidth = 40, nOutIter = 7, nInIter = 1, nSORIter = 30;
+    static double alpha = .012, ratio = .75;
+    static int minWidth = 40, nOutIter = 7, nInIter = 1, nSORIter = 30;
 
     opticalflow::MCImageDoubleX warpI2;
-    opticalflow::OpticalFlow::Coarse2FineFlow(vx, vy, warpI2, prevImg, nextImg,
-                                 alpha, ratio, minWidth, nOutIter, nInIter, nSORIter);
+    opticalflow::OpticalFlow::Coarse2FineFlow(
+            vx, vy, warpI2, prevImg, nextImg,
+            alpha, ratio, minWidth, nOutIter, nInIter, nSORIter);
 
+    /*
     // visualize optical flow
     if (flowImg != nullptr)
         ugproj::flowToColor(vx, vy, *flowImg);
-
-    // calculate probability
-    for (size_type i = 0; i < prevSize; ++i) {
-        const Rect& rectI = prevCandidates[i].second->rect;
-        for (size_type j = 0; j < nextSize; ++j) {
-            const Rect& rectJ = nextCandidates[j].second->rect;
-            Rect intersect = rectI & rectJ;
-            int intersectArea = intersect.area();
-            int unionArea =
-            rectI.area() + rectJ.area() - intersectArea;
-            prob[i][j] = (double)intersectArea / unionArea;
-        }
-    }
-
-    // match candidates by probability
-    matchCandidates(prob, prevCandidates, nextCandidates, threshold);
-
-    // array deallocation
-    deallocProbArray(prob, prevSize);
+    */
 }
 
 Scalar colorPreset[] = {
