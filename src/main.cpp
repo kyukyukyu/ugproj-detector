@@ -13,6 +13,7 @@
 
 #include "structure.hpp"
 #include "detector/detector.hpp"
+#include "associator/associator.hpp"
 #include "celiu-optflow/optical_flow.h"
 #include "optflow/flow_to_color.hpp"
 
@@ -22,24 +23,13 @@ using namespace ugproj;
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
 
-typedef pair<Face::id_type, FaceCandidate*> fc_pair;
-class fc_pair_v : public vector<fc_pair> {
-    public:
-        ~fc_pair_v();
-};
-fc_pair_v::~fc_pair_v() {
-    for (fc_pair_v::iterator it = this->begin();
-         it != this->end();
-         ++it)
-        delete it->second;
-}
-
 static vector<Face> faces;
 static const double DOUBLE_EPSILON = numeric_limits<double>::epsilon();
 
 bool parseOptions(int argc, const char** argv,
         string& videoFilename, string& cascadeFilename, string& outputDir,
         double& targetFps, double& detectionScale, double& associationThreshold);
+/*
 void associate(fc_pair_v& prevCandidates, fc_pair_v& nextCandidates,
         double threshold);
 void associate(fc_pair_v& prevCandidates,
@@ -48,6 +38,7 @@ void associate(fc_pair_v& prevCandidates,
                Mat& nextFrame,
                double threshold,
                Mat* flowImg=nullptr);
+*/
 void calculateOptFlow(Mat& frame1, Mat& frame2, OptFlowArray& vx, OptFlowArray& vy);
 void drawRect(Mat& frame, Face::id_type id, const Rect& facePosition);
 
@@ -92,7 +83,7 @@ int main(int argc, const char** argv) {
     FaceDetector detector(cascade);
     OpticalFlowManager flowManager(frameWidth, frameHeight);
 
-    fc_pair_v *prevCandidates = NULL, *currCandidates = NULL;
+    FaceAssociator::fc_v *prevCandidates = NULL, *currCandidates = NULL;
 
     while (pos < frameCount) {
         cap.grab();     // grab next frame
@@ -125,14 +116,14 @@ int main(int argc, const char** argv) {
         if (prevCandidates != NULL)
             delete prevCandidates;
         prevCandidates = currCandidates;
-        currCandidates = new fc_pair_v();
+        currCandidates = new FaceAssociator::fc_v();
         for (vector<Rect>::const_iterator it = rects.begin();
              it != rects.end();
              ++it) {
             Mat cddImage(frame, *it);
             // dynamically allocate cdd to handle multiple candidates
             FaceCandidate* cdd = new FaceCandidate(pos, *it, cddImage);
-            currCandidates->push_back(fc_pair(0, cdd));
+            currCandidates->push_back(cdd);
         }
         printf("Found %lu faces.\n", currCandidates->size());
 
@@ -147,23 +138,24 @@ int main(int argc, const char** argv) {
             printf("No candidate for previous frame: add all candidates as "
                    "new faces.\n");
 add_all:
-            for (fc_pair_v::iterator it = currCandidates->begin();
+            for (FaceAssociator::fc_v::iterator it = currCandidates->begin();
                  it != currCandidates->end();
                  ++it) {
-                Face::id_type faceId = faces.size();
-                it->first = faceId;
-                faces.push_back(Face(faceId, *(it->second)));
+                Face::id_type faceId = faces.size() + 1;
+                (*it)->faceId = faceId;
+                faces.push_back(Face(faceId, **it));
             }
             isAssociated = false;
         } else {
             printf("Performing association for faces... ");
-            associate(*prevCandidates,
-                      *currCandidates,
-                      prevFrame,
-                      frame,
-                      associationThreshold,
-                      &flowImg);
+            FaceAssociator* associator =
+                new OpticalFlowFaceAssociator(faces, *prevCandidates,
+                                              *currCandidates, flowManager,
+                                              pos - 1, pos,
+                                              associationThreshold);
+            associator->associate();
             isAssociated = true;
+            delete associator;
             printf("done.\n");
         }
 
@@ -174,10 +166,12 @@ add_all:
 
         printf("Drawing rectangles on detected faces... ");
         // draw rectangles here
-        for (fc_pair_v::const_iterator it = currCandidates->begin();
+        for (FaceAssociator::fc_v::const_iterator it = currCandidates->begin();
              it != currCandidates->end();
-             ++it)
-            drawRect(frame, it->first, it->second->rect);
+             ++it) {
+            FaceCandidate* candidate = *it;
+            drawRect(frame, candidate->faceId, candidate->rect);
+        }
         printf("done.\n");
 
         printf("Writing frame #%lu... ", pos);
@@ -245,83 +239,6 @@ bool parseOptions(int argc, const char** argv,
     }
 
     return true;
-}
-
-double** allocProbArray(fc_pair_v::size_type row, fc_pair_v::size_type col) {
-    double **prob;
-    // array allocation
-    prob = new double *[row];
-    for (fc_pair_v::size_type i = 0; i < row; ++i)
-        prob[i] = new double[col];
-    return prob;
-}
-
-void matchCandidates(double** prob,
-                     fc_pair_v& prevCandidates,
-                     fc_pair_v& nextCandidates,
-                     double threshold) {
-    typedef fc_pair_v::size_type size_type;
-
-    const size_type
-        prevSize = prevCandidates.size(), nextSize = nextCandidates.size();
-
-    for (size_type j = 0; j < nextSize; ++j) {
-        double max = -1;
-        size_type maxRow;
-
-        for (size_type i = 0; i < prevSize; ++i) {
-            if (prob[i][j] > max && prob[i][j] > threshold) {
-                max = prob[i][j];
-                maxRow = i;
-            }
-        }
-
-        vector<Face>::size_type faceId;
-        if (max > 0) {
-            faceId = prevCandidates[maxRow].first;
-        } else {
-            faceId = faces.size();
-            faces.push_back(Face(faceId));
-        }
-        nextCandidates[j].first = faceId;
-        faces[faceId].addCandidate(*(nextCandidates[j].second));
-    }
-}
-
-void deallocProbArray(double** prob, fc_pair_v::size_type row) {
-    for (fc_pair_v::size_type i = 0; i < row; ++i)
-        delete[] prob[i];
-    delete[] prob;
-}
-
-void associate(fc_pair_v& prevCandidates, fc_pair_v& nextCandidates,
-        double threshold) {
-    typedef fc_pair_v::size_type size_type;
-
-    const size_type
-        prevSize = prevCandidates.size(), nextSize = nextCandidates.size();
-
-    // array allocation
-    double **prob = allocProbArray(prevSize, nextSize);
-
-    // calculate probability
-    for (size_type i = 0; i < prevSize; ++i) {
-        const Rect& rectI = prevCandidates[i].second->rect;
-        for (size_type j = 0; j < nextSize; ++j) {
-            const Rect& rectJ = nextCandidates[j].second->rect;
-            Rect intersect = rectI & rectJ;
-            int intersectArea = intersect.area();
-            int unionArea =
-                rectI.area() + rectJ.area() - intersectArea;
-            prob[i][j] = (double)intersectArea / unionArea;
-        }
-    }
-
-    // match candidates by probability
-    matchCandidates(prob, prevCandidates, nextCandidates, threshold);
-
-    // array deallocation
-    deallocProbArray(prob, prevSize);
 }
 
 void calculateOptFlow(Mat& frame1, Mat& frame2, OptFlowArray& vx, OptFlowArray& vy) {
