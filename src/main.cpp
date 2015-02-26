@@ -32,16 +32,6 @@ static const double DOUBLE_EPSILON = numeric_limits<double>::epsilon();
 bool parseOptions(int argc, const char** argv,
         string& videoFilename, string& cascadeFilename, string& outputDir,
         double& targetFps, double& detectionScale, double& associationThreshold);
-/*
-void associate(fc_pair_v& prevCandidates, fc_pair_v& nextCandidates,
-        double threshold);
-void associate(fc_pair_v& prevCandidates,
-               fc_pair_v& nextCandidates,
-               Mat& prevFrame,
-               Mat& nextFrame,
-               double threshold,
-               Mat* flowImg=nullptr);
-*/
 void calculateOptFlow(Mat& frame1, Mat& frame2, OptFlowArray& vx, OptFlowArray& vy);
 void drawRect(Mat& frame, Face::id_type id, const Rect& facePosition);
 
@@ -263,12 +253,6 @@ void calculateOptFlow(Mat& frame1, Mat& frame2, OptFlowArray& vx, OptFlowArray& 
     opticalflow::OpticalFlow::Coarse2FineFlow(
             vx, vy, warpI2, prevImg, nextImg,
             alpha, ratio, minWidth, nOutIter, nInIter, nSORIter);
-
-    /*
-    // visualize optical flow
-    if (flowImg != nullptr)
-        ugproj::flowToColor(vx, vy, *flowImg);
-    */
 }
 
 Scalar colorPreset[] = {
