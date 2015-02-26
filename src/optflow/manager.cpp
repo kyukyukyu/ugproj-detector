@@ -15,14 +15,14 @@ void OpticalFlowManager::append(OpticalFlowManager::flow_t* flow) {
     flowVect.push_back(flow);
 }
 
-const cv::Vec2d OpticalFlowManager::getFlowAt(const temp_pos_t startTempPos,
-                                              const temp_pos_t endTempPos,
+const cv::Vec2d OpticalFlowManager::getFlowAt(const temp_idx_t startTempIndex,
+                                              const temp_idx_t endTempIndex,
                                               int x, int y) const {
-    if (startTempPos >= endTempPos) {
-        throw "startTempPos should be before endTempPos";
+    if (startTempIndex >= endTempIndex) {
+        throw "startTempIndex should be before endTempIndex";
     }
 
-    temp_pos_t tempPos = startTempPos;
+    temp_idx_t tempPos = startTempIndex;
     flow_t* flow = flowVect[tempPos];
     OptFlowArray* vx = flow->first;
     OptFlowArray* vy = flow->second;
@@ -39,7 +39,7 @@ const cv::Vec2d OpticalFlowManager::getFlowAt(const temp_pos_t startTempPos,
     Eigen::RowVector2d mat_x;
     Eigen::Matrix2d mat_flow;
     Eigen::Vector2d mat_y;
-    while (tempPos < endTempPos) {
+    while (tempPos < endTempIndex) {
         /*
          * Bilinear Interpolation
          * 

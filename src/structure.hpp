@@ -8,19 +8,19 @@
 
 namespace ugproj {
 
-    typedef unsigned long temp_pos_t;
+    typedef unsigned long temp_idx_t;
     typedef unsigned int face_id_t;
     typedef opticalflow::MCImageDoubleX OptFlowArray;
 
     class FaceCandidate {
         public:
-            const temp_pos_t framePos;
+            const temp_idx_t frameIndex;
             const cv::Rect rect;
             const cv::Mat image;
             face_id_t faceId;
 
-            FaceCandidate(temp_pos_t& framePos, const cv::Rect& rect, cv::Mat& image):
-                framePos(framePos), rect(rect), image(image), faceId(0) {};
+            FaceCandidate(temp_idx_t& frameIndex, const cv::Rect& rect, cv::Mat& image):
+                frameIndex(frameIndex), rect(rect), image(image), faceId(0) {};
     };
 
     class Face {

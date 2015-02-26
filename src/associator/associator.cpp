@@ -60,8 +60,8 @@ OpticalFlowFaceAssociator::OpticalFlowFaceAssociator(
         fc_v& prevCandidates,
         fc_v& nextCandidates,
         OpticalFlowManager& flowManager,
-        const temp_pos_t prevFramePos,
-        const temp_pos_t nextFramePos,
+        const temp_idx_t prevFramePos,
+        const temp_idx_t nextFramePos,
         double threshold):
     FaceAssociator(
             faces,

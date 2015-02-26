@@ -23,7 +23,10 @@ using namespace ugproj;
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
 
+typedef unsigned long temp_pos_t;
+
 static vector<Face> faces;
+static vector<temp_pos_t> frameNumbers;
 static const double DOUBLE_EPSILON = numeric_limits<double>::epsilon();
 
 bool parseOptions(int argc, const char** argv,
@@ -72,13 +75,13 @@ int main(int argc, const char** argv) {
 
     char filename[100];
     fs::path filepath;
-    unsigned long pos = 0;
+    temp_pos_t pos = 0;
+    temp_idx_t index = 0;
+    temp_idx_t prevIndex;
     unsigned long frameCount = cap.get(CV_CAP_PROP_FRAME_COUNT);
     double frameWidth = cap.get(CV_CAP_PROP_FRAME_WIDTH);
     double frameHeight = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
     Mat frame, prevFrame;
-    Mat flowImg;
-    bool isAssociated = false;
 
     FaceDetector detector(cascade);
     OpticalFlowManager flowManager(frameWidth, frameHeight);
@@ -95,8 +98,12 @@ int main(int argc, const char** argv) {
         if (frame.empty())
             break;
 
-        if (prevCandidates != NULL) {
-            printf("Calculating optical flow between frame #%lu and frame #%lu... ", pos - 1, pos);
+        // save frame index - frame number mapping
+        frameNumbers.push_back(pos);
+
+        // calculate optical flow if this is not the first frame
+        if (index > 0) {
+            printf("Calculating optical flow between frame #%lu and frame #%lu... ", frameNumbers[index - 1], frameNumbers[index]);
 
             OptFlowArray* vx = new OptFlowArray;
             OptFlowArray* vy = new OptFlowArray;
@@ -113,7 +120,7 @@ int main(int argc, const char** argv) {
         vector<Rect> rects;
         detector.detectFaces(frame, rects, detectionScale);
 
-        if (prevCandidates != NULL)
+        if (index > 0)
             delete prevCandidates;
         prevCandidates = currCandidates;
         currCandidates = new FaceAssociator::fc_v();
@@ -122,13 +129,13 @@ int main(int argc, const char** argv) {
              ++it) {
             Mat cddImage(frame, *it);
             // dynamically allocate cdd to handle multiple candidates
-            FaceCandidate* cdd = new FaceCandidate(pos, *it, cddImage);
+            FaceCandidate* cdd = new FaceCandidate(index, *it, cddImage);
             currCandidates->push_back(cdd);
         }
         printf("Found %lu faces.\n", currCandidates->size());
 
         // perform association here
-        if (prevCandidates == NULL) {
+        if (index == 0) {
             // skip if the first detection was performed at this time
             printf("Skip association at the first scanned frame...\n");
             goto add_all;
@@ -145,24 +152,21 @@ add_all:
                 (*it)->faceId = faceId;
                 faces.push_back(Face(faceId, **it));
             }
-            isAssociated = false;
+            prevIndex = index;
         } else {
             printf("Performing association for faces... ");
             FaceAssociator* associator =
                 new OpticalFlowFaceAssociator(faces, *prevCandidates,
                                               *currCandidates, flowManager,
-                                              pos - 1, pos,
+                                              prevIndex, index,
                                               associationThreshold);
             associator->associate();
-            isAssociated = true;
             delete associator;
             printf("done.\n");
         }
 
-        bool isAnyCandidate = currCandidates->size() > 0;
-        if (isAnyCandidate)
-            // set current frame as previous frame for next iteration
-            frame.copyTo(prevFrame);
+        // set current frame as previous frame for next iteration
+        frame.copyTo(prevFrame);
 
         printf("Drawing rectangles on detected faces... ");
         // draw rectangles here
@@ -180,13 +184,8 @@ add_all:
         filepath = outputPath / fs::path(filename);
         imwrite(filepath.native(), frame);
 
-        if (isAssociated) {
-            sprintf(filename, "optflow_%.3lu.jpg", pos);
-            filepath = outputPath / fs::path(filename);
-            imwrite(filepath.native(), flowImg);
-        }
-
         printf("done.\n");
+        ++index;
         ++pos;
     }
 

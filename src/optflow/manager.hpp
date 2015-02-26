@@ -19,7 +19,7 @@ namespace ugproj {
 
             OpticalFlowManager(int flowWidth, int flowHeight);
             void append(flow_t* flow);
-            const cv::Vec2d getFlowAt(const temp_pos_t startTempPos, const temp_pos_t endTempPos, int x, int y) const;
+            const cv::Vec2d getFlowAt(const temp_idx_t startTempIndex, const temp_idx_t endTempIndex, int x, int y) const;
     };
 } // ugproj
 
