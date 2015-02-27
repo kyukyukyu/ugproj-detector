@@ -11,6 +11,17 @@ namespace math = boost::math;
 OpticalFlowManager::OpticalFlowManager(int flowWidth, int flowHeight) :
     flowWidth(flowWidth), flowHeight(flowHeight) {};
 
+OpticalFlowManager::~OpticalFlowManager() {
+    for (std::vector<flow_t*>::iterator it = flowVect.begin();
+         it != flowVect.end();
+         ++it) {
+        flow_t* flow = *it;
+        delete flow->first;
+        delete flow->second;
+        delete flow;
+    }
+}
+
 void OpticalFlowManager::append(OpticalFlowManager::flow_t* flow) {
     flowVect.push_back(flow);
 }
@@ -58,6 +69,10 @@ const cv::Vec2d OpticalFlowManager::getFlowAt(const temp_idx_t startTempIndex,
          * Matrix operation below is from Wikipedia:
          * http://en.wikipedia.org/wiki/Bilinear_interpolation#Unit_Square
          */
+        flow = flowVect[tempPos];
+        vx = flow->first;
+        vy = flow->second;
+
         _x = x + dx;
         _y = y + dy;
         _x_f = math::modf(_x, &_x_i);
@@ -73,6 +88,8 @@ const cv::Vec2d OpticalFlowManager::getFlowAt(const temp_idx_t startTempIndex,
         mat_flow << vy->At(_x_i, _y_i, 0), vy->At(_x_i, _y_i + 1, 0),
                     vy->At(_x_i + 1, _y_i, 0), vy->At(_x_i + 1, _y_i + 1, 0);
         dy += mat_x * mat_flow * mat_y;
+
+        ++tempPos;
     }
 
     return cv::Vec2d(dx, dy);

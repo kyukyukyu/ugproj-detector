@@ -28,11 +28,12 @@ void FaceAssociator::matchCandidates() {
             faces.push_back(Face(faceId));
         }
         nextCandidates[j]->faceId = faceId;
-        faces[faceId].addCandidate(*nextCandidates[j]);
+        faces[faceId - 1].addCandidate(*nextCandidates[j]);
     }
 }
 
 void FaceAssociator::associate() {
+    calculateProb();
     matchCandidates();
 }
 
@@ -108,7 +109,7 @@ void OpticalFlowFaceAssociator::calculateProb() {
         }
 
         for (size_type j = 0; j < nextSize; ++j) {
-            prob[i][j] = pc[j] / rectArea;
+            prob[i][j] = (double)pc[j] / (double)rectArea;
         }
     }
 }

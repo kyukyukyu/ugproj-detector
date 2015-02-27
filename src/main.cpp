@@ -142,7 +142,6 @@ add_all:
                 (*it)->faceId = faceId;
                 faces.push_back(Face(faceId, **it));
             }
-            prevIndex = index;
         } else {
             printf("Performing association for faces... ");
             FaceAssociator* associator =
@@ -175,6 +174,10 @@ add_all:
         imwrite(filepath.native(), frame);
 
         printf("done.\n");
+        if (currCandidates->size() > 0) {
+            // set prevIndex to index if any face is detected on this frame
+            prevIndex = index;
+        }
         ++index;
         ++pos;
     }
