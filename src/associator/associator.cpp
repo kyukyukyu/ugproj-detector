@@ -74,7 +74,6 @@ OpticalFlowFaceAssociator::OpticalFlowFaceAssociator(
     nextFramePos(nextFramePos) {
     }
 
-// TODO: implement linear interpolation
 void OpticalFlowFaceAssociator::calculateProb() {
     typedef fc_v::size_type size_type;
 
