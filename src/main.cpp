@@ -24,6 +24,9 @@ namespace fs = boost::filesystem;
 namespace po = boost::program_options;
 
 typedef unsigned long temp_pos_t;
+typedef enum {
+    intersect, optflow
+} asc_meth_t;
 
 static vector<Face> faces;
 static vector<temp_pos_t> frameNumbers;
@@ -31,13 +34,15 @@ static const double DOUBLE_EPSILON = numeric_limits<double>::epsilon();
 
 bool parseOptions(int argc, const char** argv,
         string& videoFilename, string& cascadeFilename, string& outputDir,
-        double& targetFps, double& detectionScale, double& associationThreshold);
+        double& targetFps, double& detectionScale, double& associationThreshold,
+        asc_meth_t& associationMethod);
 void calculateOptFlow(Mat& frame1, Mat& frame2, OptFlowArray& vx, OptFlowArray& vy);
 void drawRect(Mat& frame, Face::id_type id, const Rect& facePosition);
 
 int main(int argc, const char** argv) {
     string videoFilename, cascadeFilename, outputDir;
     double targetFps, detectionScale, associationThreshold;
+    asc_meth_t associationMethod;
     bool parsed =
         parseOptions(
                 argc,
@@ -47,7 +52,8 @@ int main(int argc, const char** argv) {
                 outputDir,
                 targetFps,
                 detectionScale,
-                associationThreshold);
+                associationThreshold,
+                associationMethod);
     if (!parsed)
         return 1;
 
@@ -92,7 +98,7 @@ int main(int argc, const char** argv) {
         frameNumbers.push_back(pos);
 
         // calculate optical flow if this is not the first frame
-        if (index > 0) {
+        if (associationMethod == optflow && index > 0) {
             printf("Calculating optical flow between frame #%lu and frame #%lu... ", frameNumbers[index - 1], frameNumbers[index]);
 
             OptFlowArray* vx = new OptFlowArray;
@@ -144,11 +150,20 @@ add_all:
             }
         } else {
             printf("Performing association for faces... ");
-            FaceAssociator* associator =
-                new OpticalFlowFaceAssociator(faces, *prevCandidates,
-                                              *currCandidates, flowManager,
-                                              prevIndex, index,
-                                              associationThreshold);
+            FaceAssociator* associator;
+
+            if (associationMethod == intersect) {
+                associator =
+                    new IntersectionFaceAssociator(faces, *prevCandidates,
+                                                   *currCandidates, associationThreshold);
+            } else {    // optflow
+                associator =
+                    new OpticalFlowFaceAssociator(faces, *prevCandidates,
+                                                  *currCandidates, flowManager,
+                                                  prevIndex, index,
+                                                  associationThreshold);
+
+            }
             associator->associate();
             delete associator;
             printf("done.\n");
@@ -190,8 +205,10 @@ add_all:
 
 bool parseOptions(int argc, const char** argv,
         string& videoFilename, string& cascadeFilename, string& outputDir,
-        double& targetFps, double& detectionScale, double& associationThreshold) {
+        double& targetFps, double& detectionScale, double& associationThreshold,
+        asc_meth_t& associationMethod) {
     try {
+        string _associationMethod;
         po::options_description desc("Allowed options");
         desc.add_options()
             ("help", "produce help message.")
@@ -213,6 +230,9 @@ bool parseOptions(int argc, const char** argv,
             ("association-threshold,a",
              po::value<double>(&associationThreshold)->default_value(0.5),
              "threshold for probability used during association.")
+            ("association-method,m",
+             po::value<string>(&_associationMethod)->required(),
+             "association method. should be one of 'intersect', and 'optflow'.")
         ;
 
         po::variables_map vm;
@@ -222,6 +242,14 @@ bool parseOptions(int argc, const char** argv,
             return false;
         }
         po::notify(vm);
+
+        if (_associationMethod == "intersect") {
+            associationMethod = intersect;
+        } else if (_associationMethod == "optflow") {
+            associationMethod = optflow;
+        } else {
+            throw "invalid association method";
+        }
     } catch (std::exception& e) {
         std::cerr << "Error: " << e.what() << '\n';
         return false;

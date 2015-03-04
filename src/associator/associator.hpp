@@ -54,6 +54,13 @@ namespace ugproj {
 
     class IntersectionFaceAssociator : public FaceAssociator {
         public:
+            IntersectionFaceAssociator(
+                    std::vector<Face>& faces,
+                    fc_v& prevCandidates,
+                    fc_v& nextCandidates,
+                    double threshold):
+                FaceAssociator(faces, prevCandidates, nextCandidates,
+                               threshold) {};
             void calculateProb();
     };
 
