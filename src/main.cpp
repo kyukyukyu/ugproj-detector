@@ -25,7 +25,7 @@ namespace po = boost::program_options;
 
 typedef unsigned long temp_pos_t;
 typedef enum {
-    intersect, optflow
+    intersect, optflow, sift
 } asc_meth_t;
 
 static vector<Face> faces;
@@ -156,12 +156,18 @@ add_all:
                 associator =
                     new IntersectionFaceAssociator(faces, *prevCandidates,
                                                    *currCandidates, associationThreshold);
-            } else {    // optflow
+            } else if (associationMethod == optflow) {
                 associator =
                     new OpticalFlowFaceAssociator(faces, *prevCandidates,
                                                   *currCandidates, flowManager,
                                                   prevIndex, index,
                                                   associationThreshold);
+
+            } else {        // sift
+                associator =
+                    new SiftFaceAssociator(faces, *prevCandidates,
+                                           *currCandidates, prevFrame,
+                                           frame, associationThreshold);
 
             }
             associator->associate();
@@ -247,6 +253,8 @@ bool parseOptions(int argc, const char** argv,
             associationMethod = intersect;
         } else if (_associationMethod == "optflow") {
             associationMethod = optflow;
+        } else if (_associationMethod == "sift") {
+            associationMethod = sift;
         } else {
             throw "invalid association method";
         }

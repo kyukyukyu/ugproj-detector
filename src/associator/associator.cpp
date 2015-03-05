@@ -1,7 +1,16 @@
 #include "associator.hpp"
 #include "../optflow/manager.hpp"
 
+#include <opencv2/nonfree/features2d.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+
+#include <Eigen/Dense>
+
+#include <cstring>
+
 using namespace ugproj;
+using namespace std;
 
 void FaceAssociator::matchCandidates() {
     typedef fc_v::size_type size_type;
@@ -110,5 +119,82 @@ void OpticalFlowFaceAssociator::calculateProb() {
         for (size_type j = 0; j < nextSize; ++j) {
             prob[i][j] = (double)pc[j] / (double)rectArea;
         }
+    }
+}
+
+
+void SiftFaceAssociator::calculateProb() {
+    int prevCddsSize, nextCddsSize;
+    prevCddsSize = this->prevCandidates.size();
+    nextCddsSize = this->nextCandidates.size();
+
+    cv::SIFT sift = cv::SIFT();
+    vector<cv::KeyPoint> keypointsA, keypointsB;
+    cv::Mat descA, descB;
+    cv::Mat imgA, imgB;
+
+    cv::cvtColor(this->prevFrame, imgA, CV_BGR2GRAY);
+    cv::cvtColor(this->nextFrame, imgB, CV_BGR2GRAY);
+
+    sift(imgA, cv::Mat(), keypointsA, descA);
+    sift(imgB, cv::Mat(), keypointsB, descB);
+
+    cv::Ptr<cv::DescriptorMatcher> matcher =
+        cv::DescriptorMatcher::create("BruteForce");
+    vector<cv::DMatch> matches;
+
+    matcher->match(descA, descB, matches);
+
+    typedef Eigen::Matrix<int,
+                          Eigen::Dynamic,
+                          Eigen::Dynamic,
+                          Eigen::RowMajor> PcMatrix;
+    PcMatrix pc = PcMatrix::Zero(prevCddsSize, nextCddsSize);
+
+    for (vector<cv::DMatch>::const_iterator it = matches.cbegin();
+         it != matches.cend();
+         ++it) {
+        const cv::DMatch& match = *it;
+        const int indexA = match.queryIdx;
+        const int indexB = match.trainIdx;
+        const cv::KeyPoint& kpA = keypointsA[indexA];
+        const cv::KeyPoint& kpB = keypointsB[indexB];
+        vector<int> selectedIdxsA = vector<int>();
+        vector<int> selectedIdxsB = vector<int>();
+
+        for (int i = 0; i < prevCddsSize; ++i) {
+            if (prevCandidates[i]->rect.contains(kpA.pt)) {
+                selectedIdxsA.push_back(i);
+            }
+        }
+
+        for (int j = 0; j < nextCddsSize; ++j) {
+            if (nextCandidates[j]->rect.contains(kpB.pt)) {
+                selectedIdxsB.push_back(j);
+            }
+        }
+
+        for (vector<int>::const_iterator itI = selectedIdxsA.cbegin();
+             itI != selectedIdxsA.cend();
+             ++itI) {
+            for (vector<int>::const_iterator itJ = selectedIdxsB.cbegin();
+                 itJ != selectedIdxsB.cend();
+                 ++itJ) {
+                const int i = *itI;
+                const int j = *itJ;
+                pc(i, j) += 1;
+            }
+        }
+    }
+
+    int nRows = pc.rows();
+    for (int rowIndex = 0; rowIndex < nRows; ++rowIndex) {
+        const Eigen::RowVectorXi& _row = pc.row(rowIndex);
+        int nDest = _row.sum();
+
+        Eigen::RowVectorXd row = _row.cast<double>();
+        row /= nDest;
+
+        memcpy(this->prob[rowIndex], row.data(), sizeof(double) * row.cols());
     }
 }

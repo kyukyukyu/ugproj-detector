@@ -81,6 +81,25 @@ namespace ugproj {
                     double threshold);
             void calculateProb();
     };
+
+    class SiftFaceAssociator : public FaceAssociator {
+        private:
+            const cv::Mat& prevFrame;
+            const cv::Mat& nextFrame;
+
+        public:
+            SiftFaceAssociator(
+                    std::vector<Face>& faces,
+                    fc_v& prevCandidates,
+                    fc_v& nextCandidates,
+                    const cv::Mat& prevFrame,
+                    const cv::Mat& nextFrame,
+                    double threshold):
+                FaceAssociator(faces, prevCandidates, nextCandidates,
+                               threshold),
+                prevFrame(prevFrame), nextFrame(nextFrame) {};
+            void calculateProb();
+    };
 } // ugproj
 
 #endif
