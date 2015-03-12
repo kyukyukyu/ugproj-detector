@@ -145,11 +145,14 @@ void SiftFaceAssociator::calculateProb() {
 
     matcher->match(descA, descB, matches);
 
+
     typedef Eigen::Matrix<int,
                           Eigen::Dynamic,
                           Eigen::Dynamic,
                           Eigen::RowMajor> PcMatrix;
     PcMatrix pc = PcMatrix::Zero(prevCddsSize, nextCddsSize);
+
+	vector<char> matchesMask(matches.size(), 0);
 
     for (vector<cv::DMatch>::const_iterator it = matches.cbegin();
          it != matches.cend();
@@ -161,12 +164,16 @@ void SiftFaceAssociator::calculateProb() {
         const cv::KeyPoint& kpB = keypointsB[indexB];
         vector<int> selectedIdxsA = vector<int>();
         vector<int> selectedIdxsB = vector<int>();
-
+		int flag = 0;
         for (int i = 0; i < prevCddsSize; ++i) {
             if (prevCandidates[i]->rect.contains(kpA.pt)) {
-                selectedIdxsA.push_back(i);
+				flag = 1;
+				matchesMask[indexA] = 1;
+				selectedIdxsA.push_back(i);
             }
         }
+		if (flag == 0)
+			matchesMask[indexA] = 0;
 
         for (int j = 0; j < nextCddsSize; ++j) {
             if (nextCandidates[j]->rect.contains(kpB.pt)) {
@@ -186,6 +193,13 @@ void SiftFaceAssociator::calculateProb() {
             }
         }
     }
+
+	// drawing the results
+	cv::namedWindow("matches", 1);
+	cv::Mat img_matches;
+	drawMatches(imgA, keypointsA, imgB, keypointsB, matches, img_matches, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255), matchesMask);
+	imshow("matches", img_matches);
+	cv::waitKey(1000);
 
     int nRows = pc.rows();
     for (int rowIndex = 0; rowIndex < nRows; ++rowIndex) {

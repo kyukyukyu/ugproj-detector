@@ -111,6 +111,10 @@ int main(int argc, const char** argv) {
             printf("done.\n");
         }
 
+		if (pos < 40 || pos > 50){
+			pos++;
+			continue;
+		}
         printf("Detecting faces in frame #%lu... ", pos);
         // detect position of faces here
         vector<Rect> rects;
@@ -192,7 +196,7 @@ add_all:
 
         sprintf(filename, "%.3lu.jpg", pos);
         filepath = outputPath / fs::path(filename);
-        imwrite(filepath.native(), frame);
+        imwrite(filepath.string(), frame);
 
         printf("done.\n");
         if (currCandidates->size() > 0) {
