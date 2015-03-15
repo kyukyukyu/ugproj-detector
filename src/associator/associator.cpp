@@ -12,6 +12,8 @@
 using namespace ugproj;
 using namespace std;
 
+int result_cnt = 0;
+
 void FaceAssociator::matchCandidates() {
     typedef fc_v::size_type size_type;
 
@@ -124,6 +126,9 @@ void OpticalFlowFaceAssociator::calculateProb() {
 
 
 void SiftFaceAssociator::calculateProb() {
+
+	calculateNextRect();
+
     int prevCddsSize, nextCddsSize;
     prevCddsSize = this->prevCandidates.size();
     nextCddsSize = this->nextCandidates.size();
@@ -152,8 +157,6 @@ void SiftFaceAssociator::calculateProb() {
                           Eigen::RowMajor> PcMatrix;
     PcMatrix pc = PcMatrix::Zero(prevCddsSize, nextCddsSize);
 
-	vector<char> matchesMask(matches.size(), 0);
-
     for (vector<cv::DMatch>::const_iterator it = matches.cbegin();
          it != matches.cend();
          ++it) {
@@ -164,17 +167,12 @@ void SiftFaceAssociator::calculateProb() {
         const cv::KeyPoint& kpB = keypointsB[indexB];
         vector<int> selectedIdxsA = vector<int>();
         vector<int> selectedIdxsB = vector<int>();
-		int flag = 0;
-        for (int i = 0; i < prevCddsSize; ++i) {
+	   for (int i = 0; i < prevCddsSize; ++i) {
             if (prevCandidates[i]->rect.contains(kpA.pt)) {
-				flag = 1;
-				matchesMask[indexA] = 1;
 				selectedIdxsA.push_back(i);
             }
         }
-		if (flag == 0)
-			matchesMask[indexA] = 0;
-
+		
         for (int j = 0; j < nextCddsSize; ++j) {
             if (nextCandidates[j]->rect.contains(kpB.pt)) {
                 selectedIdxsB.push_back(j);
@@ -194,13 +192,6 @@ void SiftFaceAssociator::calculateProb() {
         }
     }
 
-	// drawing the results
-	cv::namedWindow("matches", 1);
-	cv::Mat img_matches;
-	drawMatches(imgA, keypointsA, imgB, keypointsB, matches, img_matches, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255), matchesMask);
-	imshow("matches", img_matches);
-	cv::waitKey(1000);
-
     int nRows = pc.rows();
     for (int rowIndex = 0; rowIndex < nRows; ++rowIndex) {
         const Eigen::RowVectorXi& _row = pc.row(rowIndex);
@@ -211,4 +202,87 @@ void SiftFaceAssociator::calculateProb() {
 
         memcpy(this->prob[rowIndex], row.data(), sizeof(double) * row.cols());
     }
+}
+
+void SiftFaceAssociator::calculateNextRect() {
+	int prevCddsSize, nextCddsSize;
+	prevCddsSize = this->prevCandidates.size();
+	nextCddsSize = this->nextCandidates.size();
+
+	cv::SIFT sift = cv::SIFT();
+	vector<cv::KeyPoint> keypointsA, keypointsB;
+	cv::Mat descA, descB;
+	cv::Mat imgA, imgB;
+
+	cv::cvtColor(this->prevFrame, imgA, CV_BGR2GRAY);
+	cv::cvtColor(this->nextFrame, imgB, CV_BGR2GRAY);
+
+	sift(imgA, cv::Mat(), keypointsA, descA);
+	sift(imgB, cv::Mat(), keypointsB, descB);
+
+	cv::Ptr<cv::DescriptorMatcher> matcher =
+		cv::DescriptorMatcher::create("BruteForce");
+
+	vector<cv::Mat> matchMasks;
+	vector<int> cnt;
+
+	cv::Mat matchMask;
+
+	printf("prevCddsSize is %d", prevCddsSize);
+
+	for (int i = 0; i < prevCddsSize; ++i) {
+		matchMask = cv::Mat::zeros(keypointsA.size(), keypointsB.size(), CV_8UC1);
+		matchMasks.push_back(matchMask.clone());
+		cnt.push_back(0);
+	}
+
+	int cnt_k=0;
+
+	for (vector<cv::KeyPoint>::const_iterator it = keypointsA.cbegin();
+		it != keypointsA.cend();
+		++it,++cnt_k){
+		const cv::KeyPoint& kpA = keypointsA[cnt_k];
+		int j;
+		for (int i = 0; i < prevCddsSize; ++i) {
+			if (prevCandidates[i]->rect.contains(kpA.pt)) {
+				for ( j = 0; j < keypointsB.size(); j++){
+					matchMasks[i].at<uchar>(cnt_k, j) = 1;
+					cnt[i]++;
+				}
+			}
+			else{
+				for ( j = 0; j < keypointsB.size(); j++){
+					matchMasks[i].at<uchar>(cnt_k, j) = 0;
+				}
+			}
+		}
+	}
+	cv::Scalar colorPreset[] = {
+		CV_RGB(0, 255, 0),
+		CV_RGB(255, 0, 0),
+		CV_RGB(0, 0, 255),
+		CV_RGB(255, 255, 0),
+		CV_RGB(255, 0, 255),
+		CV_RGB(0, 255, 255)
+	};
+
+	// drawing the results
+	cv::namedWindow("matches", 1);
+	cv::Mat img_matches;
+	for (int i = 0; i < prevCddsSize; ++i) {
+		vector<cv::DMatch> matches;
+		matcher->match(descA, descB, matches, matchMasks[i]);
+		printf("\nprevCdd %d's match size is %d", i, matches.size());
+	
+		drawMatches(imgA, keypointsA, imgB, keypointsB, matches, img_matches, colorPreset[i], cv::Scalar::all(-1),vector<char>(),cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+		imshow("test", img_matches);
+		cv::waitKey(500);
+	}	
+	imshow("matches", img_matches);
+	cv::waitKey(1000);
+
+	char filename[100];
+	sprintf(filename, "output/result%d.jpg", result_cnt++);
+	imwrite(filename, img_matches);
+
 }

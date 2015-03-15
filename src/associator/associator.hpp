@@ -99,7 +99,8 @@ namespace ugproj {
                                threshold),
                 prevFrame(prevFrame), nextFrame(nextFrame) {};
             void calculateProb();
-    };
+			void calculateNextRect();
+	};
 } // ugproj
 
 #endif
