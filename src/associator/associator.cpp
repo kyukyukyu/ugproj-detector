@@ -238,6 +238,7 @@ void SiftFaceAssociator::calculateNextRect() {
 
 	int cnt_k=0;
 
+	// classify each rect's feature with making match mask
 	for (vector<cv::KeyPoint>::const_iterator it = keypointsA.cbegin();
 		it != keypointsA.cend();
 		++it,++cnt_k){
@@ -269,17 +270,33 @@ void SiftFaceAssociator::calculateNextRect() {
 	// drawing the results
 	cv::namedWindow("matches", 1);
 	cv::Mat img_matches;
+	vector<cv::DMatch> merged_matches;
+
+	vector<vector<cv::DMatch>> matches_list;
+
+	// split each rect's matches with match mask
 	for (int i = 0; i < prevCddsSize; ++i) {
-		vector<cv::DMatch> matches;
-		matcher->match(descA, descB, matches, matchMasks[i]);
-		printf("\nprevCdd %d's match size is %d", i, matches.size());
-	
-		drawMatches(imgA, keypointsA, imgB, keypointsB, matches, img_matches, colorPreset[i], cv::Scalar::all(-1),vector<char>(),cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+		vector < cv::DMatch > matches_temp;
+		matches_list.push_back(matches_temp);
+
+		matcher->match(descA, descB, matches_list[i], matchMasks[i]);
+		printf("\nprevCdd %d's match size is %d", i, matches_list[i].size());
+
+		drawMatches(imgA, keypointsA, imgB, keypointsB, matches_list[i], img_matches, colorPreset[i], cv::Scalar::all(-1), vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 		imshow("test", img_matches);
 		cv::waitKey(500);
-	}	
+
+	}
+
 	imshow("matches", img_matches);
 	cv::waitKey(1000);
+
+	// pick 2 points in random
+
+
+	// calculate S, a, b
+
+
 
 	char filename[100];
 	sprintf(filename, "output/result%d.jpg", result_cnt++);
