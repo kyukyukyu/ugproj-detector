@@ -6,6 +6,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 #include <Eigen/Dense>
+#include <Eigen/LU>
 
 #include <cstring>
 #include <cstdlib>
@@ -14,6 +15,7 @@
 using namespace ugproj;
 using namespace std;
 using Eigen::MatrixXd;
+using namespace Eigen;
 
 int result_cnt = 0;
 
@@ -221,7 +223,7 @@ void pinv(MatrixType& pinvmat){
 }
 */
 
-void pinv(int N, int M, vector <double> &A, vector <double> &B, vector <double> &X)
+void findSAB(int N, int M, vector <double> &A, vector <double> &B, vector <double> &X)
 {
 	Eigen::MatrixXd _A(N, M);
 	Eigen::MatrixXd _B(N, 1);
@@ -233,7 +235,7 @@ void pinv(int N, int M, vector <double> &A, vector <double> &B, vector <double> 
 			_A(i, j) = A[i*M + j];
 		}
 	}
-	_X = (_A.transpose()*_A).inverse()*(_A.transpose()*_B);
+	_X = _A.inverse()*_B;
 	
 	for (int i = 0; i < M; i++)
 		X[i] = _X(i, 0);
@@ -376,19 +378,27 @@ void SiftFaceAssociator::calculateNextRect() {
 			colorPreset[2]);
 
 		// calculate Rect
-		vector <double> A(12);
+		vector <double> A(16);
 		vector <double> B(4);
-		vector <double> X(3);
+		vector <double> X(4);
 
-		A =	{	(double)x1, 1, 0, 
-			(double)x2, 1, 0,
-			(double)y1, 0, 1,
-			(double)y2, 0, 1 };
+		/*
+		A =	{	0, 0, 1, 0, 
+			1,0, 1, 0,
+			0,1, 0, 1,
+			0, 0, 0, 1 };
+		B = { 1,3,3,1 };
+		*/
+		
+		A = { (double)x1, 0, 1, 0,
+			(double)x2, 0, 1, 0,
+			0, (double)y1, 0, 1,
+			0, (double)y2, 0, 1 };
 		B = { (double)ax1, (double)ax2, (double)ay1, (double)ay2 };
+		
+		findSAB(4, 4, A, B, X);
 
-		pinv(4, 3, A, B, X);
-
-		printf("\nS, a, b = (%lf,%lf,%lf)\n", X[0], X[1], X[2]);
+		printf("\nSx, Sy, a, b = (%lf,%lf,%lf,%lf)\n", X[0], X[1], X[2], X[3]);
 
 		// draw Rect in imgB
 
@@ -396,10 +406,14 @@ void SiftFaceAssociator::calculateNextRect() {
 		// (Mat& frame, Face::id_type id, const Rect& facePosition)
 		cv::Rect calculatedRect;
 		calculatedRect = prevCandidates[i]->rect;
-		calculatedRect.x += X[1];
-		calculatedRect.y += X[2];
+		printf("\ncalculatedRect before (%d,%d,%d,%d)\n", calculatedRect.x, calculatedRect.y, calculatedRect.width, calculatedRect.height);
+
+		calculatedRect.x += X[2];
+		calculatedRect.y += X[3];
 		calculatedRect.width *= X[0];
-		calculatedRect.height *= X[0];
+		calculatedRect.height *= X[1];
+
+		printf("\ncalculatedRect (%d,%d,%d,%d)\n", calculatedRect.x, calculatedRect.y, calculatedRect.width, calculatedRect.height);
 
 		/*
 		rectangle(imgB,
@@ -414,7 +428,7 @@ void SiftFaceAssociator::calculateNextRect() {
 		drawMatches(imgA, keypointsA, imgB, keypointsB, matches_list[i], img_matches, colorPreset[i], cv::Scalar::all(-1), vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 		
 		imshow("match", img_matches);
-		cv::waitKey(5000);
+		cv::waitKey(500);
 
 	}
 
