@@ -310,6 +310,7 @@ void SiftFaceAssociator::calculateNextRect() {
 	vector<cv::DMatch> merged_matches;
 
 	vector<vector<cv::DMatch>> matches_list;
+	cv::Mat next = nextFrame.clone();
 
 	// split each rect's matches with match mask
 	for (int i = 0; i < prevCddsSize; ++i) {
@@ -346,7 +347,7 @@ void SiftFaceAssociator::calculateNextRect() {
 
 		printf("\n1st random pointer is %d (%d, %d) -> (%d, %d)", idx_bp1, x1, y1, ax1, ay1);
 		printf("\n2nd random pointer is %d (%d, %d) -> (%d, %d)", idx_bp2, x2, y2, ax2, ay2);
-		
+
 		// print random match pointer
 		string temp = to_string(i) + "_bp1";
 		cv::putText(imgA,
@@ -354,28 +355,28 @@ void SiftFaceAssociator::calculateNextRect() {
 			cvPoint(x1, y1),
 			cv::FONT_HERSHEY_PLAIN,
 			1.0,
-			colorPreset[2]);
+			colorPreset[i]);
 		temp = to_string(i) + "_bp2";
 		cv::putText(imgA,
 			temp,
 			cvPoint(x2, y2),
 			cv::FONT_HERSHEY_PLAIN,
 			1.0,
-			colorPreset[2]);
+			colorPreset[i]);
 		temp = to_string(i) + "_ap1";
-		cv::putText(imgB,
+		cv::putText(next,
 			temp,
 			cvPoint(ax1, ay1),
 			cv::FONT_HERSHEY_PLAIN,
 			1.0,
-			colorPreset[2]);
+			colorPreset[i]);
 		temp = to_string(i) + "_ap2";
-		cv::putText(imgB,
+		cv::putText(next,
 			temp,
 			cvPoint(ax2, ay2),
 			cv::FONT_HERSHEY_PLAIN,
 			1.0,
-			colorPreset[2]);
+			colorPreset[i]);
 
 		// calculate Rect
 		vector <double> A(16);
@@ -406,26 +407,39 @@ void SiftFaceAssociator::calculateNextRect() {
 		// (Mat& frame, Face::id_type id, const Rect& facePosition)
 		cv::Rect calculatedRect;
 		calculatedRect = prevCandidates[i]->rect;
-		printf("\ncalculatedRect before (%d,%d,%d,%d)\n", calculatedRect.x, calculatedRect.y, calculatedRect.width, calculatedRect.height);
+		int bef_x1 = calculatedRect.x;
+		int bef_y1 = calculatedRect.y;
+		int bef_x2 = calculatedRect.x + calculatedRect.width - 1;
+		int bef_y2 = calculatedRect.y + calculatedRect.height - 1;
 
-		calculatedRect.x += X[2];
-		calculatedRect.y += X[3];
-		calculatedRect.width *= X[0];
-		calculatedRect.height *= X[1];
+		printf("\nimg size is (%d,%d)\n", imgA.size().width, imgA.size().height);
 
-		printf("\ncalculatedRect (%d,%d,%d,%d)\n", calculatedRect.x, calculatedRect.y, calculatedRect.width, calculatedRect.height);
+		printf("\ncalculatedRect before (%d,%d) - (%d,%d)\n", bef_x1,bef_y1, bef_x2, bef_y2);
 
-		/*
-		rectangle(imgB,
-			cvPoint(calculatedRect.x, calculatedRect.y),
-			cvPoint(
-			calculatedRect.x + calculatedRect.width - 1,
-			calculatedRect.y + calculatedRect.height - 1),
-			CV_RGB(0, 255, 255));
-			*/
+		int aft_x1 = (int)(X[0] * (double)bef_x1 + X[2]);
+		int aft_y1 = (int)(X[1] * (double)bef_y1 + X[3]);
+		int aft_x2 = (int)(X[0] * (double)bef_x2 + X[2]);
+		int aft_y2 = (int)(X[1] * (double)bef_y2 + X[3]);
+
+		if (aft_x1 >= imgA.size().width)	aft_x1 = imgA.size().width-1;
+		else if (aft_x1 < 0) aft_x1 = 0;
+		if (aft_y1 >= imgA.size().height)aft_y1 = imgA.size().height-1;
+		else if (aft_y1 < 0) aft_y1 = 0;
+		if (aft_x2 >= imgA.size().width)	aft_x2 = imgA.size().width-1;
+		else if (aft_x2 < 0) aft_x2 = 0;
+		if (aft_y2 >= imgA.size().width)	aft_y2 = imgA.size().height-1;
+		else if (aft_y2 < 0) aft_y2 = 0;
+
+		printf("\ncalculatedRect (%d,%d) - (%d,%d)\n", aft_x1,aft_y1,aft_x2,aft_y2);
+
+		
+		rectangle(next,
+			cvPoint(aft_x1, aft_y1),
+			cvPoint(aft_x2,	aft_y2),
+			colorPreset[i]);
 
 		// draw matches
-		drawMatches(imgA, keypointsA, imgB, keypointsB, matches_list[i], img_matches, colorPreset[i], cv::Scalar::all(-1), vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+		drawMatches(imgA, keypointsA, next, keypointsB, matches_list[i], img_matches, colorPreset[i], cv::Scalar::all(-1), vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 		
 		imshow("match", img_matches);
 		cv::waitKey(500);

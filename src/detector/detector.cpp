@@ -51,3 +51,4 @@ void FaceDetector::detectFaces(Mat& frame, vector<Rect>& rects, const float scal
         rects.push_back(new_r);
     }
 }
+
