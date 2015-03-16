@@ -8,9 +8,12 @@
 #include <Eigen/Dense>
 
 #include <cstring>
+#include <cstdlib>
+#include <time.h>
 
 using namespace ugproj;
 using namespace std;
+using Eigen::MatrixXd;
 
 int result_cnt = 0;
 
@@ -124,7 +127,6 @@ void OpticalFlowFaceAssociator::calculateProb() {
     }
 }
 
-
 void SiftFaceAssociator::calculateProb() {
 
 	calculateNextRect();
@@ -204,6 +206,39 @@ void SiftFaceAssociator::calculateProb() {
     }
 }
 
+
+/*
+void pinv(MatrixType& pinvmat){
+	eigen_assert(m_isInitialized && "SVD is not initialized.");
+	double  pinvtoler = 1.e-6; // choose your tolerance wisely!
+	SingularValuesType singularValues_inv = m_singularValues;
+	for (long i = 0; i<m_workMatrix.cols(); ++i) {
+		if (m_singularValues(i) > pinvtoler)
+			singularValues_inv(i) = 1.0 / m_singularValues(i);
+		else singularValues_inv(i) = 0;
+	}
+	pinvmat = (m_matrixV*singularValues_inv.asDiagonal()*m_matrixU.transpose());
+}
+*/
+
+void pinv(int N, int M, vector <double> &A, vector <double> &B, vector <double> &X)
+{
+	Eigen::MatrixXd _A(N, M);
+	Eigen::MatrixXd _B(N, 1);
+	Eigen::MatrixXd _X(M, 1);
+
+	for (int i = 0; i < N; i++) {
+		_B(i, 0) = B[i];
+		for (int j = 0; j < M; j++) {
+			_A(i, j) = A[i*M + j];
+		}
+	}
+	_X = (_A.transpose()*_A).inverse()*(_A.transpose()*_B);
+	
+	for (int i = 0; i < M; i++)
+		X[i] = _X(i, 0);
+}
+
 void SiftFaceAssociator::calculateNextRect() {
 	int prevCddsSize, nextCddsSize;
 	prevCddsSize = this->prevCandidates.size();
@@ -268,7 +303,7 @@ void SiftFaceAssociator::calculateNextRect() {
 	};
 
 	// drawing the results
-	cv::namedWindow("matches", 1);
+	//cv::namedWindow("matches", 1);
 	cv::Mat img_matches;
 	vector<cv::DMatch> merged_matches;
 
@@ -282,24 +317,118 @@ void SiftFaceAssociator::calculateNextRect() {
 		matcher->match(descA, descB, matches_list[i], matchMasks[i]);
 		printf("\nprevCdd %d's match size is %d", i, matches_list[i].size());
 
+		
+		
+		// pick random match pointer
+		int idx_m1, idx_m2, idx_bp1, idx_bp2, idx_ap1, idx_ap2;
+		srand(time(NULL));
+		idx_m1 = rand() % matches_list[i].size();
+		idx_m2 = rand() % matches_list[i].size();
+
+		idx_bp1 = matches_list[i][idx_m1].queryIdx;
+		idx_bp2 = matches_list[i][idx_m2].queryIdx;
+		idx_ap1 = matches_list[i][idx_m1].trainIdx;
+		idx_ap2 = matches_list[i][idx_m2].trainIdx;
+
+		int x1, y1, x2, y2, ax1, ay1, ax2, ay2;
+		x1 = keypointsA[idx_bp1].pt.x;
+		y1 = keypointsA[idx_bp1].pt.y;
+		x2 = keypointsA[idx_bp2].pt.x;
+		y2 = keypointsA[idx_bp2].pt.y;
+
+		ax1 = keypointsA[idx_ap1].pt.x;
+		ay1 = keypointsA[idx_ap1].pt.y;
+		ax2 = keypointsA[idx_ap2].pt.x;
+		ay2 = keypointsA[idx_ap2].pt.y;
+
+
+		printf("\n1st random pointer is %d (%d, %d) -> (%d, %d)", idx_bp1, x1, y1, ax1, ay1);
+		printf("\n2nd random pointer is %d (%d, %d) -> (%d, %d)", idx_bp2, x2, y2, ax2, ay2);
+		
+		// print random match pointer
+		string temp = to_string(i) + "_bp1";
+		cv::putText(imgA,
+			temp,
+			cvPoint(x1, y1),
+			cv::FONT_HERSHEY_PLAIN,
+			1.0,
+			colorPreset[2]);
+		temp = to_string(i) + "_bp2";
+		cv::putText(imgA,
+			temp,
+			cvPoint(x2, y2),
+			cv::FONT_HERSHEY_PLAIN,
+			1.0,
+			colorPreset[2]);
+		temp = to_string(i) + "_ap1";
+		cv::putText(imgB,
+			temp,
+			cvPoint(ax1, ay1),
+			cv::FONT_HERSHEY_PLAIN,
+			1.0,
+			colorPreset[2]);
+		temp = to_string(i) + "_ap2";
+		cv::putText(imgB,
+			temp,
+			cvPoint(ax2, ay2),
+			cv::FONT_HERSHEY_PLAIN,
+			1.0,
+			colorPreset[2]);
+
+		// calculate Rect
+		vector <double> A(12);
+		vector <double> B(4);
+		vector <double> X(3);
+
+		A =	{	(double)x1, 1, 0, 
+			(double)x2, 1, 0,
+			(double)y1, 0, 1,
+			(double)y2, 0, 1 };
+		B = { (double)ax1, (double)ax2, (double)ay1, (double)ay2 };
+
+		pinv(4, 3, A, B, X);
+
+		printf("\nS, a, b = (%lf,%lf,%lf)\n", X[0], X[1], X[2]);
+
+		// draw Rect in imgB
+
+		//  drawRect(frame, candidate->faceId, candidate->rect);
+		// (Mat& frame, Face::id_type id, const Rect& facePosition)
+		cv::Rect calculatedRect;
+		calculatedRect = prevCandidates[i]->rect;
+		calculatedRect.x += X[1];
+		calculatedRect.y += X[2];
+		calculatedRect.width *= X[0];
+		calculatedRect.height *= X[0];
+
+		/*
+		rectangle(imgB,
+			cvPoint(calculatedRect.x, calculatedRect.y),
+			cvPoint(
+			calculatedRect.x + calculatedRect.width - 1,
+			calculatedRect.y + calculatedRect.height - 1),
+			CV_RGB(0, 255, 255));
+			*/
+
+		// draw matches
 		drawMatches(imgA, keypointsA, imgB, keypointsB, matches_list[i], img_matches, colorPreset[i], cv::Scalar::all(-1), vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
-		imshow("test", img_matches);
-		cv::waitKey(500);
+		
+		imshow("match", img_matches);
+		cv::waitKey(5000);
 
 	}
 
-	imshow("matches", img_matches);
-	cv::waitKey(1000);
+	// pick 2 points in random and calculate S, a, b
+	vector<vector<cv::Rect>> CandidateRects;
+	 
+	for (int i = 0; i < prevCddsSize; ++i) {
+	
 
-	// pick 2 points in random
-
-
-	// calculate S, a, b
-
-
+	}
 
 	char filename[100];
 	sprintf(filename, "output/result%d.jpg", result_cnt++);
 	imwrite(filename, img_matches);
 
 }
+
