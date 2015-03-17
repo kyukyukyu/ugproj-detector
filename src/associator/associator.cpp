@@ -8,6 +8,8 @@
 #include <Eigen/Dense>
 #include <Eigen/LU>
 
+#include <boost/random.hpp>
+
 #include <cstring>
 #include <cstdlib>
 #include <time.h>
@@ -16,6 +18,7 @@ using namespace ugproj;
 using namespace std;
 using Eigen::MatrixXd;
 using namespace Eigen;
+using namespace boost;
 
 int result_cnt = 0;
 
@@ -318,13 +321,23 @@ void SiftFaceAssociator::calculateNextRect() {
 		matches_list.push_back(matches_temp);
 
 		matcher->match(descA, descB, matches_list[i], matchMasks[i]);
-		printf("\nprevCdd %d's match size is %d", i, matches_list[i].size());
+		printf("\nprevCdd %d's match size is %d\n", i, matches_list[i].size());
 
+		int bef_x1, bef_y1, bef_x2, bef_y2;
+		int aft_x1, aft_y1, aft_x2, aft_y2;
 		
+		vector<vector<cv::Rect>> eachRectCandidates;
+
+		vector<cv::Rect> rectCandidates;
+
+		int   ndx;
 		
+		srand(time(NULL));
+		for (int cnt_it = 0; cnt_it < 10; cnt_it++){
+
 		// pick random match pointer
 		int idx_m1, idx_m2, idx_bp1, idx_bp2, idx_ap1, idx_ap2;
-		srand(time(NULL));
+		
 		idx_m1 = rand() % matches_list[i].size();
 		idx_m2 = rand() % matches_list[i].size();
 
@@ -332,65 +345,38 @@ void SiftFaceAssociator::calculateNextRect() {
 		idx_bp2 = matches_list[i][idx_m2].queryIdx;
 		idx_ap1 = matches_list[i][idx_m1].trainIdx;
 		idx_ap2 = matches_list[i][idx_m2].trainIdx;
-
+		
 		int x1, y1, x2, y2, ax1, ay1, ax2, ay2;
 		x1 = keypointsA[idx_bp1].pt.x;
 		y1 = keypointsA[idx_bp1].pt.y;
 		x2 = keypointsA[idx_bp2].pt.x;
 		y2 = keypointsA[idx_bp2].pt.y;
 
-		ax1 = keypointsA[idx_ap1].pt.x;
-		ay1 = keypointsA[idx_ap1].pt.y;
-		ax2 = keypointsA[idx_ap2].pt.x;
-		ay2 = keypointsA[idx_ap2].pt.y;
+		ax1 = keypointsB[idx_ap1].pt.x;
+		ay1 = keypointsB[idx_ap1].pt.y;
+		ax2 = keypointsB[idx_ap2].pt.x;
+		ay2 = keypointsB[idx_ap2].pt.y;
 
+		printf("\n#%d 1st random pointer is %d (%d, %d) -> (%d, %d)\n", cnt_it,idx_bp1, x1, y1, ax1, ay1);
+		printf("#%d 2nd random pointer is %d (%d, %d) -> (%d, %d)\n", cnt_it,idx_bp2, x2, y2, ax2, ay2);
 
-		printf("\n1st random pointer is %d (%d, %d) -> (%d, %d)", idx_bp1, x1, y1, ax1, ay1);
-		printf("\n2nd random pointer is %d (%d, %d) -> (%d, %d)", idx_bp2, x2, y2, ax2, ay2);
-
+		/*
 		// print random match pointer
 		string temp = to_string(i) + "_bp1";
-		cv::putText(imgA,
-			temp,
-			cvPoint(x1, y1),
-			cv::FONT_HERSHEY_PLAIN,
-			1.0,
-			colorPreset[i]);
+		cv::putText(imgA,temp,cvPoint(x1, y1),cv::FONT_HERSHEY_PLAIN,1.0,colorPreset[i]);
 		temp = to_string(i) + "_bp2";
-		cv::putText(imgA,
-			temp,
-			cvPoint(x2, y2),
-			cv::FONT_HERSHEY_PLAIN,
-			1.0,
-			colorPreset[i]);
+		cv::putText(imgA,temp,cvPoint(x2, y2),cv::FONT_HERSHEY_PLAIN,1.0,colorPreset[i]);
 		temp = to_string(i) + "_ap1";
-		cv::putText(next,
-			temp,
-			cvPoint(ax1, ay1),
-			cv::FONT_HERSHEY_PLAIN,
-			1.0,
-			colorPreset[i]);
+		cv::putText(next,temp,cvPoint(ax1, ay1),cv::FONT_HERSHEY_PLAIN,1.0,colorPreset[i]);
 		temp = to_string(i) + "_ap2";
-		cv::putText(next,
-			temp,
-			cvPoint(ax2, ay2),
-			cv::FONT_HERSHEY_PLAIN,
-			1.0,
-			colorPreset[i]);
+		cv::putText(next,temp,cvPoint(ax2, ay2),cv::FONT_HERSHEY_PLAIN,1.0,colorPreset[i]);
+		*/
 
 		// calculate Rect
 		vector <double> A(16);
 		vector <double> B(4);
 		vector <double> X(4);
 
-		/*
-		A =	{	0, 0, 1, 0, 
-			1,0, 1, 0,
-			0,1, 0, 1,
-			0, 0, 0, 1 };
-		B = { 1,3,3,1 };
-		*/
-		
 		A = { (double)x1, 0, 1, 0,
 			(double)x2, 0, 1, 0,
 			0, (double)y1, 0, 1,
@@ -399,12 +385,8 @@ void SiftFaceAssociator::calculateNextRect() {
 		
 		findSAB(4, 4, A, B, X);
 
-		printf("\nSx, Sy, a, b = (%lf,%lf,%lf,%lf)\n", X[0], X[1], X[2], X[3]);
+		printf("Sx, Sy, a, b = (%lf,%lf,%lf,%lf)\n", X[0], X[1], X[2], X[3]);
 
-		// draw Rect in imgB
-
-		//  drawRect(frame, candidate->faceId, candidate->rect);
-		// (Mat& frame, Face::id_type id, const Rect& facePosition)
 		cv::Rect calculatedRect;
 		calculatedRect = prevCandidates[i]->rect;
 		int bef_x1 = calculatedRect.x;
@@ -412,9 +394,7 @@ void SiftFaceAssociator::calculateNextRect() {
 		int bef_x2 = calculatedRect.x + calculatedRect.width - 1;
 		int bef_y2 = calculatedRect.y + calculatedRect.height - 1;
 
-		printf("\nimg size is (%d,%d)\n", imgA.size().width, imgA.size().height);
-
-		printf("\ncalculatedRect before (%d,%d) - (%d,%d)\n", bef_x1,bef_y1, bef_x2, bef_y2);
+		printf("calculatedRect before (%d,%d) - (%d,%d)\n", bef_x1,bef_y1, bef_x2, bef_y2);
 
 		int aft_x1 = (int)(X[0] * (double)bef_x1 + X[2]);
 		int aft_y1 = (int)(X[1] * (double)bef_y1 + X[3]);
@@ -430,12 +410,63 @@ void SiftFaceAssociator::calculateNextRect() {
 		if (aft_y2 >= imgA.size().width)	aft_y2 = imgA.size().height-1;
 		else if (aft_y2 < 0) aft_y2 = 0;
 
-		printf("\ncalculatedRect (%d,%d) - (%d,%d)\n", aft_x1,aft_y1,aft_x2,aft_y2);
+		calculatedRect.x = aft_x1;
+		calculatedRect.y = aft_y1;
+		calculatedRect.width = aft_x2 - aft_x1;
+		calculatedRect.height = aft_y2 - aft_y1;
 
+		rectCandidates.push_back(calculatedRect);
+
+		printf("calculatedRect after (%d,%d) - (%d,%d)\n", aft_x1,aft_y1,aft_x2,aft_y2);
+
+		}
+		eachRectCandidates.push_back(rectCandidates);
 		
+		printf("calculate inlier ratio\n");
+		// count which is included to each rect Candidates among current prevCandidate's match keypointsB
+		vector<int> cnt_match;
+		vector<int> cnt_all;
+		
+		for (int cnt_a = 0;cnt_a<keypointsB.size();cnt_a++){
+			const cv::KeyPoint& target = keypointsB[cnt_a];
+			for (int cnt_rc = 0; cnt_rc < 10; ++cnt_rc) {
+				if (cnt_all.size() <= cnt_rc){
+					cnt_all.push_back(0);
+				}
+				if (rectCandidates[cnt_rc].contains(target.pt)) {
+					cnt_all[cnt_rc]++;
+				}
+			}
+		}
+		int cnt_m = 0; // match count
+		for (vector<cv::DMatch>::const_iterator it = matches_list[i].cbegin();
+			it != matches_list[i].cend();
+			++it, ++cnt_m){
+			const cv::KeyPoint& target = keypointsB[matches_list[i][cnt_m].trainIdx];
+			int j;
+			for (int cnt_rc = 0; cnt_rc < 10; ++cnt_rc) {
+				if (cnt_match.size() <= cnt_rc){
+					cnt_match.push_back(0);
+				}
+				if (rectCandidates[cnt_rc].contains(target.pt)) {
+					cnt_match[cnt_rc]++;	
+				}
+			}
+		}
+		cv::Rect maxRect;
+		int max = 0;
+		printf("find Max Ratio Rect\n");
+		for (int cnt_rc = 0; cnt_rc < 10; ++cnt_rc) {
+			if ((double)cnt_match[cnt_rc] / (double)cnt_all[cnt_rc]>max) {
+				max = cnt_match[cnt_rc]/cnt_all[cnt_rc];
+				maxRect = rectCandidates[cnt_rc];
+			}
+		}
+		
+		printf("Max Rect (%d,%d) - (%d,%d)\n", maxRect.x, maxRect.y, maxRect.x + maxRect.width - 1, maxRect.y + maxRect.height);
 		rectangle(next,
-			cvPoint(aft_x1, aft_y1),
-			cvPoint(aft_x2,	aft_y2),
+			cvPoint(maxRect.x, maxRect.y),
+			cvPoint(maxRect.x+maxRect.width-1,maxRect.y+maxRect.height),
 			colorPreset[i]);
 
 		// draw matches
@@ -448,12 +479,7 @@ void SiftFaceAssociator::calculateNextRect() {
 
 	// pick 2 points in random and calculate S, a, b
 	vector<vector<cv::Rect>> CandidateRects;
-	 
-	for (int i = 0; i < prevCddsSize; ++i) {
 	
-
-	}
-
 	char filename[100];
 	sprintf(filename, "output/result%d.jpg", result_cnt++);
 	imwrite(filename, img_matches);

@@ -111,11 +111,6 @@ int main(int argc, const char** argv) {
             printf("done.\n");
         }
 		
-		if (pos < 234 || pos > 245){
-			pos++;
-			continue;
-		}
-		
         printf("Detecting faces in frame #%lu... ", pos);
         // detect position of faces here
         vector<Rect> rects;
