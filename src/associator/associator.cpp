@@ -212,19 +212,25 @@ void SiftFaceAssociator::calculateProb() {
 }
 
 
-/*
-void pinv(MatrixType& pinvmat){
-	eigen_assert(m_isInitialized && "SVD is not initialized.");
-	double  pinvtoler = 1.e-6; // choose your tolerance wisely!
-	SingularValuesType singularValues_inv = m_singularValues;
-	for (long i = 0; i<m_workMatrix.cols(); ++i) {
-		if (m_singularValues(i) > pinvtoler)
-			singularValues_inv(i) = 1.0 / m_singularValues(i);
-		else singularValues_inv(i) = 0;
-	}
-	pinvmat = (m_matrixV*singularValues_inv.asDiagonal()*m_matrixU.transpose());
+
+void pinv(int N, int M, vector <double> &A, vector <double> &B, vector <double> &X)
+{
+Eigen::MatrixXd _A(N, M);
+Eigen::MatrixXd _B(N, 1);
+Eigen::MatrixXd _X(M, 1);
+
+for (int i = 0; i < N; i++) {
+_B(i, 0) = B[i];
+for (int j = 0; j < M; j++) {
+_A(i, j) = A[i*M + j];
 }
-*/
+}
+_X = (_A.transpose()*_A).inverse()*(_A.transpose()*_B);
+
+for (int i = 0; i < M; i++)
+X[i] = _X(i, 0);
+}
+
 
 void findSAB(int N, int M, vector <double> &A, vector <double> &B, vector <double> &X)
 {
@@ -373,9 +379,11 @@ void SiftFaceAssociator::calculateNextRect() {
 		*/
 
 		// calculate Rect
-		vector <double> A(16);
+//		vector <double> A(16);
+		vector <double> A(12);
 		vector <double> B(4);
-		vector <double> X(4);
+//		vector <double> X(4);
+		vector <double> X(3);
 
 		A = { (double)x1, 0, 1, 0,
 			(double)x2, 0, 1, 0,
@@ -383,9 +391,11 @@ void SiftFaceAssociator::calculateNextRect() {
 			0, (double)y2, 0, 1 };
 		B = { (double)ax1, (double)ax2, (double)ay1, (double)ay2 };
 		
-		findSAB(4, 4, A, B, X);
+		// findSAB(4, 4, A, B, X);
+		pinv(4, 3, A, B, X);
 
-		printf("Sx, Sy, a, b = (%lf,%lf,%lf,%lf)\n", X[0], X[1], X[2], X[3]);
+		//printf("Sx, Sy, a, b = (%lf,%lf,%lf,%lf)\n", X[0], X[1], X[2], X[3]);
+		printf("S, a, b = (%lf,%lf,%lf)\n", X[0], X[1], X[2]);
 
 		cv::Rect calculatedRect;
 		calculatedRect = prevCandidates[i]->rect;
@@ -396,10 +406,16 @@ void SiftFaceAssociator::calculateNextRect() {
 
 		printf("calculatedRect before (%d,%d) - (%d,%d)\n", bef_x1,bef_y1, bef_x2, bef_y2);
 
-		int aft_x1 = (int)(X[0] * (double)bef_x1 + X[2]);
-		int aft_y1 = (int)(X[1] * (double)bef_y1 + X[3]);
-		int aft_x2 = (int)(X[0] * (double)bef_x2 + X[2]);
-		int aft_y2 = (int)(X[1] * (double)bef_y2 + X[3]);
+
+		//int aft_x1 = (int)(X[0] * (double)bef_x1 + X[2]);
+		//int aft_y1 = (int)(X[1] * (double)bef_y1 + X[3]);
+		//int aft_x2 = (int)(X[0] * (double)bef_x2 + X[2]);
+		//int aft_y2 = (int)(X[1] * (double)bef_y2 + X[3]);
+
+		int aft_x1 = (int)(X[0] * (double)bef_x1 + X[1]);
+		int aft_y1 = (int)(X[0] * (double)bef_y1 + X[2]);
+		int aft_x2 = (int)(X[0] * (double)bef_x2 + X[1]);
+		int aft_y2 = (int)(X[0] * (double)bef_y2 + X[2]);
 
 		if (aft_x1 >= imgA.size().width)	aft_x1 = imgA.size().width-1;
 		else if (aft_x1 < 0) aft_x1 = 0;
@@ -455,7 +471,7 @@ void SiftFaceAssociator::calculateNextRect() {
 		}
 		cv::Rect maxRect;
 		int max = 0;
-		printf("find Max Ratio Rect\n");
+		printf("\nfind Max Ratio Rect\n");
 		for (int cnt_rc = 0; cnt_rc < 10; ++cnt_rc) {
 			if ((double)cnt_match[cnt_rc] / (double)cnt_all[cnt_rc]>max) {
 				max = cnt_match[cnt_rc]/cnt_all[cnt_rc];
@@ -472,14 +488,11 @@ void SiftFaceAssociator::calculateNextRect() {
 		// draw matches
 		drawMatches(imgA, keypointsA, next, keypointsB, matches_list[i], img_matches, colorPreset[i], cv::Scalar::all(-1), vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 		
-		imshow("match", img_matches);
-		cv::waitKey(500);
+	//	imshow("match", img_matches);
+	//	cv::waitKey(500);
 
 	}
 
-	// pick 2 points in random and calculate S, a, b
-	vector<vector<cv::Rect>> CandidateRects;
-	
 	char filename[100];
 	sprintf(filename, "output/result%d.jpg", result_cnt++);
 	imwrite(filename, img_matches);
