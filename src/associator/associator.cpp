@@ -501,7 +501,7 @@ void SiftFaceAssociator::calculateNextRect() {
 
 	char filename[100];
 	sprintf(filename, "output/result%d.jpg", result_cnt++);
-	imwrite(filename, next);
+	imwrite(filename, img_matches);
 
 }
 
