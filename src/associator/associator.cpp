@@ -364,26 +364,9 @@ void SiftFaceAssociator::calculateNextRect() {
 			ax2 = keypointsB[idx_ap2].pt.x;
 			ay2 = keypointsB[idx_ap2].pt.y;
 
-			//printf("\n#%d 1st random pointer is %d (%d, %d) -> (%d, %d)\n", cnt_it, idx_bp1, x1, y1, ax1, ay1);
-			//printf("#%d 2nd random pointer is %d (%d, %d) -> (%d, %d)\n", cnt_it, idx_bp2, x2, y2, ax2, ay2);
-
-			/*
-			// print random match pointer
-			string temp = to_string(i) + "_bp1";
-			cv::putText(imgA,temp,cvPoint(x1, y1),cv::FONT_HERSHEY_PLAIN,1.0,colorPreset[i]);
-			temp = to_string(i) + "_bp2";
-			cv::putText(imgA,temp,cvPoint(x2, y2),cv::FONT_HERSHEY_PLAIN,1.0,colorPreset[i]);
-			temp = to_string(i) + "_ap1";
-			cv::putText(next,temp,cvPoint(ax1, ay1),cv::FONT_HERSHEY_PLAIN,1.0,colorPreset[i]);
-			temp = to_string(i) + "_ap2";
-			cv::putText(next,temp,cvPoint(ax2, ay2),cv::FONT_HERSHEY_PLAIN,1.0,colorPreset[i]);
-			*/
-
 			// calculate pseudo inverse or inverse
-			//		vector <double> A(16); // for inverse
 			vector <double> A(12); // for pseudo inverse
 			vector <double> B(4);
-			//		vector <double> X(4); // for inverse
 			vector <double> X(3); // for pseudo inverse
 
 			A = { (double)x1, 0, 1, 0,
@@ -395,23 +378,12 @@ void SiftFaceAssociator::calculateNextRect() {
 			// findSxSyAB(4, 4, A, B, X);
 			findSAB(4, 3, A, B, X);
 
-			//printf("Sx, Sy, a, b = (%lf,%lf,%lf,%lf)\n", X[0], X[1], X[2], X[3]);
-			//printf("S, a, b = (%lf,%lf,%lf)\n", X[0], X[1], X[2]);
-
 			cv::Rect calculatedRect;
 			calculatedRect = prevCandidates[i]->rect;
 			int bef_x1 = calculatedRect.x;
 			int bef_y1 = calculatedRect.y;
 			int bef_x2 = calculatedRect.x + calculatedRect.width - 1;
 			int bef_y2 = calculatedRect.y + calculatedRect.height - 1;
-
-			//printf("calculatedRect before (%d,%d) - (%d,%d)\n", bef_x1, bef_y1, bef_x2, bef_y2);
-
-			// when inverse
-			//int aft_x1 = (int)(X[0] * (double)bef_x1 + X[2]);
-			//int aft_y1 = (int)(X[1] * (double)bef_y1 + X[3]);
-			//int aft_x2 = (int)(X[0] * (double)bef_x2 + X[2]);
-			//int aft_y2 = (int)(X[1] * (double)bef_y2 + X[3]);
 
 			// when pseudo inverse
 			int aft_x1 = (int)(X[0] * (double)bef_x1 + X[1]);
@@ -435,8 +407,6 @@ void SiftFaceAssociator::calculateNextRect() {
 			calculatedRect.height = aft_y2 - aft_y1;
 
 			rectCandidates.push_back(calculatedRect);
-
-			//printf("calculatedRect after (%d,%d) - (%d,%d)\n", aft_x1, aft_y1, aft_x2, aft_y2);
 
 		}
 		eachRectCandidates.push_back(rectCandidates);
