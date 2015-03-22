@@ -1,6 +1,8 @@
 #ifndef UGPROJ_ASSOCIATOR_HEADER
 #define UGPROJ_ASSOCIATOR_HEADER
 
+#define UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT 10
+
 #include "../structure.hpp"
 #include "../optflow/manager.hpp"
 

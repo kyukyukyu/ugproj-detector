@@ -13,6 +13,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <time.h>
+#include <utility>
 
 using namespace ugproj;
 using namespace std;
@@ -312,31 +313,30 @@ void SiftFaceAssociator::calculateNextRect() {
 
 	// find max rect from each prev candidates
 	for (int i = 0; i < prevCddsSize; ++i) {
-		vector < cv::DMatch > matches_temp;
-		matches_list.push_back(matches_temp);
+		vector<cv::DMatch> matches;
+		matches_list.push_back(matches);
 
 		// split each prevCandidates' matches with match mask
-		matcher->match(descA, descB, matches_list[i], matchMasks[i]);
+		matcher->match(descA, descB, matches, matchMasks[i]);
 	
-		int bef_x1, bef_y1, bef_x2, bef_y2;
-		int aft_x1, aft_y1, aft_x2, aft_y2;
-
 		vector< vector<cv::Rect> > eachRectCandidates; // vector for all rect candidates
 		vector<cv::Rect> rectCandidates; // vector for 10 rect candidates from each prev Candidates
 
 		srand(time(NULL));
-		for (int cnt_it = 0; cnt_it < 10; cnt_it++){
+		for (int cnt_it = 0;
+             cnt_it < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT;
+             cnt_it++) {
 
 			// pick random match pointer
 			int idx_m1, idx_m2, idx_bp1, idx_bp2, idx_ap1, idx_ap2;
 
-			idx_m1 = rand() % matches_list[i].size();
-			idx_m2 = rand() % matches_list[i].size();
+			idx_m1 = rand() % matches.size();
+			idx_m2 = rand() % matches.size();
 
-			idx_bp1 = matches_list[i][idx_m1].queryIdx;
-			idx_bp2 = matches_list[i][idx_m2].queryIdx;
-			idx_ap1 = matches_list[i][idx_m1].trainIdx;
-			idx_ap2 = matches_list[i][idx_m2].trainIdx;
+			idx_bp1 = matches[idx_m1].queryIdx;
+			idx_bp2 = matches[idx_m2].queryIdx;
+			idx_ap1 = matches[idx_m1].trainIdx;
+			idx_ap2 = matches[idx_m2].trainIdx;
 
 			int x1, y1, x2, y2, ax1, ay1, ax2, ay2;
 
@@ -377,14 +377,10 @@ void SiftFaceAssociator::calculateNextRect() {
 			int aft_y2 = (int)(matX[0] * (double)bef_y2 + matX[2]);
 
 			// cut boundry
-			if (aft_x1 >= imgA.size().width)	aft_x1 = imgA.size().width - 1;
-			else if (aft_x1 < 0) aft_x1 = 0;
-			if (aft_y1 >= imgA.size().height)aft_y1 = imgA.size().height - 1;
-			else if (aft_y1 < 0) aft_y1 = 0;
-			if (aft_x2 >= imgA.size().width)	aft_x2 = imgA.size().width - 1;
-			else if (aft_x2 < 0) aft_x2 = 0;
-			if (aft_y2 >= imgA.size().width)	aft_y2 = imgA.size().height - 1;
-			else if (aft_y2 < 0) aft_y2 = 0;
+            aft_x1 = std::min( std::max(0, aft_x1), imgA.size().width - 1 );
+            aft_y1 = std::min( std::max(0, aft_y1), imgA.size().height - 1 );
+            aft_x2 = std::min( std::max(0, aft_x2), imgA.size().width - 1 );
+            aft_y2 = std::min( std::max(0, aft_y2), imgA.size().height - 1 );
 
 			calculatedRect.x = aft_x1;
 			calculatedRect.y = aft_y1;
@@ -398,16 +394,16 @@ void SiftFaceAssociator::calculateNextRect() {
 
 		// count which is included to each rect Candidates among current prevCandidate's match keypointsB
 		printf("\ncalculate inlier ratio\n");
-		vector<int> cnt_match; // matched feature with each prev Candidate
-		vector<int> cnt_all; // all matched feature
+		vector<int> cnt_match(UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT, 0); // matched feature with each prev Candidate
+		vector<int> cnt_all(UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT, 0); // all matched feature
 
 		// calculate cnt_all
-		for (int cnt_a = 0; cnt_a < keypointsB.size(); cnt_a++){
-			const cv::KeyPoint& target = keypointsB[cnt_a];
-			for (int cnt_rc = 0; cnt_rc < 10; ++cnt_rc) {
-				if (cnt_all.size() <= cnt_rc){
-					cnt_all.push_back(0);
-				}
+        vector<cv::KeyPoint>::const_iterator itKeypB;
+        for (itKeypB = keypointsB.cbegin(); itKeypB != keypointsB.cend(); ++itKeypB) {
+			const cv::KeyPoint& target = *itKeypB;
+			for (int cnt_rc = 0;
+                 cnt_rc < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT;
+                 ++cnt_rc) {
 				if (rectCandidates[cnt_rc].contains(target.pt)) {
 					cnt_all[cnt_rc]++;
 				}
@@ -415,16 +411,14 @@ void SiftFaceAssociator::calculateNextRect() {
 		}
 
 		// calculate cnt_match
-		int cnt_m = 0; // match count
-		for (vector<cv::DMatch>::const_iterator it = matches_list[i].cbegin();
-			it != matches_list[i].cend();
-			++it, ++cnt_m){
-			const cv::KeyPoint& target = keypointsB[matches_list[i][cnt_m].trainIdx];
-			int j;
-			for (int cnt_rc = 0; cnt_rc < 10; ++cnt_rc) {
-				if (cnt_match.size() <= cnt_rc){
-					cnt_match.push_back(0);
-				}
+		for (vector<cv::DMatch>::const_iterator it = matches.cbegin();
+			it != matches.cend();
+			++it){
+            const cv::DMatch& match = *it;
+			const cv::KeyPoint& target = keypointsB[match.trainIdx];
+			for (int cnt_rc = 0;
+                 cnt_rc < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT;
+                 ++cnt_rc) {
 				if (rectCandidates[cnt_rc].contains(target.pt)) {
 					cnt_match[cnt_rc]++;
 				}
@@ -433,11 +427,15 @@ void SiftFaceAssociator::calculateNextRect() {
 
 		// find max ratio box
 		cv::Rect maxRect;
-		int max = 0;
+		double max = 0;
 		printf("find Max Ratio Box\n");
-		for (int cnt_rc = 0; cnt_rc < 10; ++cnt_rc) {
-			if ((double)cnt_match[cnt_rc] / (double)cnt_all[cnt_rc] > max) {
-				max = cnt_match[cnt_rc] / cnt_all[cnt_rc];
+		for (int cnt_rc = 0;
+             cnt_rc < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT;
+             ++cnt_rc) {
+            double inlierRatio = (double) cnt_match[cnt_rc] /
+                                 (double) cnt_all[cnt_rc];
+			if (inlierRatio > max) {
+				max = inlierRatio;
 				maxRect = rectCandidates[cnt_rc];
 			}
 		}
@@ -449,7 +447,7 @@ void SiftFaceAssociator::calculateNextRect() {
 			colorPreset[i]);
 
 		// draw matches
-		drawMatches(imgA, keypointsA, next, keypointsB, matches_list[i], img_matches, colorPreset[i], cv::Scalar::all(-1), vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+		drawMatches(imgA, keypointsA, next, keypointsB, matches, img_matches, colorPreset[i], cv::Scalar::all(-1), vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 
 	}
 
