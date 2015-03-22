@@ -213,25 +213,11 @@ void SiftFaceAssociator::calculateProb() {
 
 
 
-void findSAB(int N, int M, vector <double> &A, vector <double> &B, vector <double> &X)
+void findSAB(Eigen::MatrixXd& matA, Eigen::VectorXd& matB, Eigen::VectorXd& matX)
 {
-	// find S, A, B by pseudo inverse
-	Eigen::MatrixXd _A(N, M);
-	Eigen::MatrixXd _B(N, 1);
-	Eigen::MatrixXd _X(M, 1);
-
-	for (int i = 0; i < N; i++) {
-		_B(i, 0) = B[i];
-		for (int j = 0; j < M; j++) {
-			_A(i, j) = A[i*M + j];
-		}
-	}
-	_X = (_A.transpose()*_A).inverse()*(_A.transpose()*_B);
-
-	for (int i = 0; i < M; i++)
-		X[i] = _X(i, 0);
+    Eigen::MatrixXd matAT = matA.transpose();
+    matX = (matAT * matA).inverse() * (matAT * matB);
 }
-
 
 void findSxSyAB(int N, int M, vector <double> &A, vector <double> &B, vector <double> &X)
 {
@@ -320,7 +306,7 @@ void SiftFaceAssociator::calculateNextRect() {
 	// drawing the results
 	cv::Mat img_matches;
 	
-	vector<vector<cv::DMatch>> matches_list; // vector for all matches from each prev candidates
+	vector< vector<cv::DMatch> > matches_list; // vector for all matches from each prev candidates
 
 	cv::Mat next = nextFrame.clone();
 
@@ -335,7 +321,7 @@ void SiftFaceAssociator::calculateNextRect() {
 		int bef_x1, bef_y1, bef_x2, bef_y2;
 		int aft_x1, aft_y1, aft_x2, aft_y2;
 
-		vector<vector<cv::Rect>> eachRectCandidates; // vector for all rect candidates
+		vector< vector<cv::Rect> > eachRectCandidates; // vector for all rect candidates
 		vector<cv::Rect> rectCandidates; // vector for 10 rect candidates from each prev Candidates
 
 		srand(time(NULL));
@@ -365,18 +351,17 @@ void SiftFaceAssociator::calculateNextRect() {
 			ay2 = keypointsB[idx_ap2].pt.y;
 
 			// calculate pseudo inverse or inverse
-			vector <double> A(12); // for pseudo inverse
-			vector <double> B(4);
-			vector <double> X(3); // for pseudo inverse
+            Eigen::MatrixXd matA(4, 3);
+            Eigen::VectorXd matB(4);
+            Eigen::VectorXd matX;
 
-			A = { (double)x1, 0, 1, 0,
-				(double)x2, 0, 1, 0,
-				0, (double)y1, 0, 1,
-				0, (double)y2, 0, 1 };
-			B = { (double)ax1, (double)ax2, (double)ay1, (double)ay2 };
+			matA << x1, 1, 0,
+				    x2, 1, 0,
+				    y1, 0, 1,
+				    y2, 0, 1;
+			matB << ax1, ax2, ay1, ay2;
 
-			// findSxSyAB(4, 4, A, B, X);
-			findSAB(4, 3, A, B, X);
+			findSAB(matA, matB, matX);
 
 			cv::Rect calculatedRect;
 			calculatedRect = prevCandidates[i]->rect;
@@ -386,10 +371,10 @@ void SiftFaceAssociator::calculateNextRect() {
 			int bef_y2 = calculatedRect.y + calculatedRect.height - 1;
 
 			// when pseudo inverse
-			int aft_x1 = (int)(X[0] * (double)bef_x1 + X[1]);
-			int aft_y1 = (int)(X[0] * (double)bef_y1 + X[2]);
-			int aft_x2 = (int)(X[0] * (double)bef_x2 + X[1]);
-			int aft_y2 = (int)(X[0] * (double)bef_y2 + X[2]);
+			int aft_x1 = (int)(matX[0] * (double)bef_x1 + matX[1]);
+			int aft_y1 = (int)(matX[0] * (double)bef_y1 + matX[2]);
+			int aft_x2 = (int)(matX[0] * (double)bef_x2 + matX[1]);
+			int aft_y2 = (int)(matX[0] * (double)bef_y2 + matX[2]);
 
 			// cut boundry
 			if (aft_x1 >= imgA.size().width)	aft_x1 = imgA.size().width - 1;
