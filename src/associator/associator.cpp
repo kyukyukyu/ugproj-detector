@@ -269,46 +269,12 @@ void SiftFaceAssociator::calculateNextRect() {
         cv::DescriptorMatcher::create("BruteForce");
 
     vector<cv::Mat> matchMasks; // match masks for each prevCandidates
-    vector<int> cnt;
-    cv::Mat matchMask;
-
-    printf("prevCddsSize is %d", prevCddsSize);
-
-    for (int i = 0; i < prevCddsSize; ++i) {
-        // matchMask initialize
-        matchMask = cv::Mat::zeros(keypointsA.size(), keypointsB.size(), CV_8UC1);
-        matchMasks.push_back(matchMask.clone());
-        cnt.push_back(0);
-    }
-
-    int cnt_k = 0; // cnt for keypoints
-
-    // classify each rect's feature with making match mask
-    for (vector<cv::KeyPoint>::const_iterator it = keypointsA.cbegin();
-        it != keypointsA.cend();
-        ++it, ++cnt_k){
-        const cv::KeyPoint& kpA = keypointsA[cnt_k];
-        int j;
-        for (int i = 0; i < prevCddsSize; ++i) {
-            if (prevCandidates[i]->rect.contains(kpA.pt)) {
-                for (j = 0; j < keypointsB.size(); j++){
-                    matchMasks[i].at<uchar>(cnt_k, j) = 1;
-                    cnt[i]++;
-                }
-            }
-            else{
-                for (j = 0; j < keypointsB.size(); j++){
-                    matchMasks[i].at<uchar>(cnt_k, j) = 0;
-                }
-            }
-        }
-    }
-
-    // drawing the results
-    cv::Mat img_matches;
+    this->computeMatchMasks(keypointsA, keypointsB, matchMasks);
 
     vector< vector<cv::DMatch> > matches_list; // vector for all matches from each prev candidates
 
+    // drawing the results
+    cv::Mat img_matches;
     cv::Mat next = nextFrame.clone();
 
     // find max rect from each prev candidates
@@ -457,3 +423,35 @@ void SiftFaceAssociator::calculateNextRect() {
 
 }
 
+void SiftFaceAssociator::computeMatchMasks(
+        std::vector<cv::KeyPoint>& keypointsA,
+        std::vector<cv::KeyPoint>& keypointsB,
+        std::vector<cv::Mat>& matchMasks) {
+    fc_v::size_type prevCddsSize = this->prevCandidates.size();
+    fc_v::size_type i;
+
+    for (i = 0; i < prevCddsSize; ++i) {
+        cv::Mat matchMask =
+            cv::Mat::zeros(keypointsA.size(), keypointsB.size(), CV_8UC1);
+        matchMasks.push_back(matchMask);
+    }
+
+    for (vector<cv::KeyPoint>::const_iterator it = keypointsA.cbegin();
+         it != keypointsA.cend();
+         ++it) {
+        const cv::KeyPoint& kpA = *it;
+        vector<cv::KeyPoint>::size_type i = it - keypointsA.cbegin();
+        fc_v::size_type j;
+
+        for (j = 0; j < prevCddsSize; ++j) {
+            cv::Mat& matchMask = matchMasks[j];
+
+            if (prevCandidates[j]->rect.contains(kpA.pt)) {
+                matchMask.row(i).setTo(1);
+            }
+            else {
+                matchMask.row(i).setTo(0);
+            }
+        }
+    }
+}

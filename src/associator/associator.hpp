@@ -88,6 +88,9 @@ namespace ugproj {
         private:
             const cv::Mat& prevFrame;
             const cv::Mat& nextFrame;
+            void computeMatchMasks(std::vector<cv::KeyPoint>& keypointsA,
+                                   std::vector<cv::KeyPoint>& keypointsB,
+                                   std::vector<cv::Mat>& matchMasks);
 
         public:
             SiftFaceAssociator(
@@ -101,8 +104,8 @@ namespace ugproj {
                                threshold),
                 prevFrame(prevFrame), nextFrame(nextFrame) {};
             void calculateProb();
-			void calculateNextRect();
-	};
+            void calculateNextRect();
+    };
 } // ugproj
 
 #endif
