@@ -134,7 +134,9 @@ int main(int argc, const char** argv) {
         printf("Found %lu faces.\n", currCandidates->size());
 
         // perform association here
-        if (index == 0) {
+        if (currCandidates->size() == 0) {
+            printf("Hence, no association.\n");
+        } else if (index == 0) {
             // skip if the first detection was performed at this time
             printf("Skip association at the first scanned frame...\n");
             goto add_all;
