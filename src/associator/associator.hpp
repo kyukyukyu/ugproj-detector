@@ -91,6 +91,12 @@ namespace ugproj {
             void computeMatchMasks(std::vector<cv::KeyPoint>& keypointsA,
                                    std::vector<cv::KeyPoint>& keypointsB,
                                    std::vector<cv::Mat>& matchMasks);
+            void computeFitBox(const cv::DMatch& match1,
+                               const cv::DMatch& match2,
+                               const std::vector<cv::KeyPoint>& keypointsA,
+                               const std::vector<cv::KeyPoint>& keypointsB,
+                               const cv::Rect& beforeRect,
+                               cv::Rect& fitBox) const;
 
         public:
             SiftFaceAssociator(

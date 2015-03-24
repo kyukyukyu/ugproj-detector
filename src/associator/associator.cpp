@@ -298,64 +298,11 @@ void SiftFaceAssociator::calculateNextRect() {
             idx_m1 = rand() % matches.size();
             idx_m2 = rand() % matches.size();
 
-            // keypoint indices of random-picked matches
-            // bp is for 'before (key)point', ap is for 'after (key)point'
-            int idx_bp1, idx_bp2, idx_ap1, idx_ap2;
-            idx_bp1 = matches[idx_m1].queryIdx;
-            idx_bp2 = matches[idx_m2].queryIdx;
-            idx_ap1 = matches[idx_m1].trainIdx;
-            idx_ap2 = matches[idx_m2].trainIdx;
-
-            int x1, y1, x2, y2;
-            x1 = keypointsA[idx_bp1].pt.x;
-            y1 = keypointsA[idx_bp1].pt.y;
-            x2 = keypointsA[idx_bp2].pt.x;
-            y2 = keypointsA[idx_bp2].pt.y;
-
-            int sx1, sy1, sx2, sy2;
-            sx1 = keypointsB[idx_ap1].pt.x;
-            sy1 = keypointsB[idx_ap1].pt.y;
-            sx2 = keypointsB[idx_ap2].pt.x;
-            sy2 = keypointsB[idx_ap2].pt.y;
-
-            // compute pseudo inverse
-            Eigen::MatrixXd matA(4, 3);
-            Eigen::VectorXd matB(4);
-            Eigen::VectorXd matX;
-            double s, a, b;
-            matA << x1, 1, 0,
-                    x2, 1, 0,
-                    y1, 0, 1,
-                    y2, 0, 1;
-            matB << sx1, sx2, sy1, sy2;
-            findSAB(matA, matB, matX);
-            s = matX[0];
-            a = matX[1];
-            b = matX[2];
-
             const cv::Rect& beforeRect = prevCandidates[i]->rect;
-            int bef_x1 = beforeRect.x;
-            int bef_y1 = beforeRect.y;
-            int bef_x2 = beforeRect.x + beforeRect.width - 1;
-            int bef_y2 = beforeRect.y + beforeRect.height - 1;
-
-            // when pseudo inverse
-            int aft_x1 = (int)(s * (double)bef_x1 + a);
-            int aft_y1 = (int)(s * (double)bef_y1 + b);
-            int aft_x2 = (int)(s * (double)bef_x2 + a);
-            int aft_y2 = (int)(s * (double)bef_y2 + b);
-
-            // keep in boundary
-            aft_x1 = std::min( std::max(0, aft_x1), imgA.size().width - 1 );
-            aft_y1 = std::min( std::max(0, aft_y1), imgA.size().height - 1 );
-            aft_x2 = std::min( std::max(0, aft_x2), imgA.size().width - 1 );
-            aft_y2 = std::min( std::max(0, aft_y2), imgA.size().height - 1 );
-
             cv::Rect fitBox;
-            fitBox.x = aft_x1;
-            fitBox.y = aft_y1;
-            fitBox.width = aft_x2 - aft_x1;
-            fitBox.height = aft_y2 - aft_y1;
+            this->computeFitBox(matches[idx_m1], matches[idx_m2],
+                                keypointsA, keypointsB,
+                                beforeRect, fitBox);
             rectCandidates.push_back(fitBox);
         }
 
@@ -455,4 +402,70 @@ void SiftFaceAssociator::computeMatchMasks(
             }
         }
     }
+}
+
+void SiftFaceAssociator::computeFitBox(
+        const cv::DMatch& match1,
+        const cv::DMatch& match2,
+        const std::vector<cv::KeyPoint>& keypointsA,
+        const std::vector<cv::KeyPoint>& keypointsB,
+        const cv::Rect& beforeRect,
+        cv::Rect& fitBox) const {
+    // keypoint indices of random-picked matches
+    // bp is for 'before (key)point', ap is for 'after (key)point'
+    int idx_bp1, idx_bp2, idx_ap1, idx_ap2;
+    idx_bp1 = match1.queryIdx;
+    idx_bp2 = match2.queryIdx;
+    idx_ap1 = match1.trainIdx;
+    idx_ap2 = match2.trainIdx;
+
+    int x1, y1, x2, y2;
+    x1 = keypointsA[idx_bp1].pt.x;
+    y1 = keypointsA[idx_bp1].pt.y;
+    x2 = keypointsA[idx_bp2].pt.x;
+    y2 = keypointsA[idx_bp2].pt.y;
+
+    int sx1, sy1, sx2, sy2;
+    sx1 = keypointsB[idx_ap1].pt.x;
+    sy1 = keypointsB[idx_ap1].pt.y;
+    sx2 = keypointsB[idx_ap2].pt.x;
+    sy2 = keypointsB[idx_ap2].pt.y;
+
+    // compute pseudo inverse
+    Eigen::MatrixXd matA(4, 3);
+    Eigen::VectorXd matB(4);
+    Eigen::VectorXd matX;
+    double s, a, b;
+    matA << x1, 1, 0,
+            x2, 1, 0,
+            y1, 0, 1,
+            y2, 0, 1;
+    matB << sx1, sx2, sy1, sy2;
+    findSAB(matA, matB, matX);
+    s = matX[0];
+    a = matX[1];
+    b = matX[2];
+
+    int bef_x1 = beforeRect.x;
+    int bef_y1 = beforeRect.y;
+    int bef_x2 = beforeRect.x + beforeRect.width - 1;
+    int bef_y2 = beforeRect.y + beforeRect.height - 1;
+
+    // when pseudo inverse
+    int aft_x1 = (int)(s * (double)bef_x1 + a);
+    int aft_y1 = (int)(s * (double)bef_y1 + b);
+    int aft_x2 = (int)(s * (double)bef_x2 + a);
+    int aft_y2 = (int)(s * (double)bef_y2 + b);
+
+    // keep in boundary
+    cv::Size frameSize = this->prevFrame.size();
+    aft_x1 = std::min( std::max(0, aft_x1), frameSize.width - 1 );
+    aft_y1 = std::min( std::max(0, aft_y1), frameSize.height - 1 );
+    aft_x2 = std::min( std::max(0, aft_x2), frameSize.width - 1 );
+    aft_y2 = std::min( std::max(0, aft_y2), frameSize.height - 1 );
+
+    fitBox.x = aft_x1;
+    fitBox.y = aft_y1;
+    fitBox.width = aft_x2 - aft_x1;
+    fitBox.height = aft_y2 - aft_y1;
 }
