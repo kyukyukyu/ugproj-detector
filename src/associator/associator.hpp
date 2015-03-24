@@ -111,7 +111,7 @@ namespace ugproj {
                                const cv::Mat& nextFrame,
                                double threshold);
             void calculateProb();
-            void calculateNextRect();
+            void visualize(cv::Mat& img);
     };
 } // ugproj
 

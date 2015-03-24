@@ -183,30 +183,6 @@ void findSAB(Eigen::MatrixXd& matA, Eigen::VectorXd& matB, Eigen::VectorXd& matX
     matX = (matAT * matA).inverse() * (matAT * matB);
 }
 
-void SiftFaceAssociator::calculateNextRect() {
-
-    fc_v::size_type prevCddsSize;
-    prevCddsSize = this->prevCandidates.size();
-
-    cv::Scalar colorPreset[] = {
-        CV_RGB(0, 255, 0),
-        CV_RGB(255, 0, 0),
-        CV_RGB(0, 0, 255),
-        CV_RGB(255, 255, 0),
-        CV_RGB(255, 0, 255),
-        CV_RGB(0, 255, 255)
-    };
-
-    // drawing the results
-    cv::Mat img_matches;
-    cv::Mat next = nextFrame.clone();
-
-    char filename[100];
-    sprintf(filename, "output/result%d.jpg", result_cnt++);
-    imwrite(filename, img_matches);
-
-}
-
 void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
                                            cv::Rect& bestFitBox) {
     const cv::Rect& queryBox = this->prevCandidates[queryIdx]->rect;
@@ -274,15 +250,6 @@ void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
             bestFitBox = fitBox;
         }
     }
-    /*
-    rectangle(next,
-        cvPoint(maxRect.x, maxRect.y),
-        cvPoint(maxRect.x + maxRect.width - 1, maxRect.y + maxRect.height),
-        colorPreset[i]);
-
-    // draw matches
-    drawMatches(imgA, keypointsA, next, keypointsB, matches, img_matches, colorPreset[i], cv::Scalar::all(-1), vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
-    */
 }
 
 void SiftFaceAssociator::computeMatchMask(const cv::Rect& beforeRect,
@@ -366,4 +333,47 @@ void SiftFaceAssociator::computeFitBox(
     fitBox.y = aft_y1;
     fitBox.width = aft_x2 - aft_x1;
     fitBox.height = aft_y2 - aft_y1;
+}
+
+static cv::Scalar colorPreset[] = {
+    CV_RGB(0, 255, 0),
+    CV_RGB(255, 0, 0),
+    CV_RGB(0, 0, 255),
+    CV_RGB(255, 255, 0),
+    CV_RGB(255, 0, 255),
+    CV_RGB(0, 255, 255)
+};
+// compute the number of preset colors
+static const int nColorPreset = sizeof(colorPreset) / sizeof(cv::Scalar);
+
+void SiftFaceAssociator::visualize(cv::Mat& img) {
+    // clone prevFrame and nextFrame
+    cv::Mat _prevFrame = this->prevFrame.clone();
+    cv::Mat _nextFrame = this->nextFrame.clone();
+
+    fc_v::size_type i;
+    for (i = 0; i < this->prevCandidates.size(); ++i) {
+        // set color
+        cv::Scalar& color = colorPreset[i % nColorPreset];
+
+        // draw candidate box on _prevFrame
+        const cv::Rect& cddBox = this->prevCandidates[i]->rect;
+        cv::rectangle(_prevFrame,
+                      cddBox.tl(), cddBox.br(),
+                      color);
+
+        // draw best fit box on _nextFrame
+        const cv::Rect& fitBox = this->bestFitBoxes[i];
+        cv::rectangle(_nextFrame,
+                      fitBox.tl(), fitBox.br(),
+                      color);
+    }
+
+    // draw matches
+    cv::drawMatches(_prevFrame,
+                    this->keypointsA,
+                    _nextFrame,
+                    this->keypointsB,
+                    this->matches,
+                    img);
 }

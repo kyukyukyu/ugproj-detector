@@ -6,6 +6,8 @@
 
 #include <cstdio>
 #include <cmath>
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <limits>
 #include <utility>
@@ -172,9 +174,25 @@ add_all:
 
             }
             associator->associate();
-            // TODO: implement this
-            cv::Mat matchImg;
-            visualize(associator);
+
+            if (associationMethod == sift) {
+                // TODO: implement this
+                printf("Writing descriptor matches and fit boxes... ");
+
+                cv::Mat matchImg;
+                ((SiftFaceAssociator*) associator)->visualize(matchImg);
+
+                ostringstream ss;
+                ss << "match_"
+                   << std::setw(3) << std::setfill('0')
+                   << std::setprecision(3) << pos << ".jpg";
+
+                fs::path matchFilepath = outputPath / fs::path(ss.str());
+                imwrite(matchFilepath.string(), matchImg);
+
+                printf("done.\n");
+            }
+
             delete associator;
             printf("done.\n");
         }
