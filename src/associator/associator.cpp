@@ -133,86 +133,49 @@ void OpticalFlowFaceAssociator::calculateProb() {
     }
 }
 
-void SiftFaceAssociator::calculateProb() {
-
-    calculateNextRect();
-
-    int prevCddsSize, nextCddsSize;
-    prevCddsSize = this->prevCandidates.size();
-    nextCddsSize = this->nextCandidates.size();
-
-    cv::SIFT sift = cv::SIFT();
-    vector<cv::KeyPoint> keypointsA, keypointsB;
-    cv::Mat descA, descB;
+SiftFaceAssociator::SiftFaceAssociator(std::vector<Face>& faces,
+                                       fc_v& prevCandidates,
+                                       fc_v& nextCandidates,
+                                       const cv::Mat& prevFrame,
+                                       const cv::Mat& nextFrame,
+                                       double threshold):
+    FaceAssociator(faces, prevCandidates, nextCandidates, threshold),
+    prevFrame(prevFrame), nextFrame(nextFrame) {
     cv::Mat imgA, imgB;
+    cv::SIFT sift = cv::SIFT();
 
     cv::cvtColor(this->prevFrame, imgA, CV_BGR2GRAY);
     cv::cvtColor(this->nextFrame, imgB, CV_BGR2GRAY);
-
-    sift(imgA, cv::Mat(), keypointsA, descA);
-    sift(imgB, cv::Mat(), keypointsB, descB);
-
-    cv::Ptr<cv::DescriptorMatcher> matcher =
-        cv::DescriptorMatcher::create("BruteForce");
-    vector<cv::DMatch> matches;
-
-    matcher->match(descA, descB, matches);
-
-
-    typedef Eigen::Matrix<int,
-                          Eigen::Dynamic,
-                          Eigen::Dynamic,
-                          Eigen::RowMajor> PcMatrix;
-    PcMatrix pc = PcMatrix::Zero(prevCddsSize, nextCddsSize);
-
-    for (vector<cv::DMatch>::const_iterator it = matches.cbegin();
-         it != matches.cend();
-         ++it) {
-        const cv::DMatch& match = *it;
-        const int indexA = match.queryIdx;
-        const int indexB = match.trainIdx;
-        const cv::KeyPoint& kpA = keypointsA[indexA];
-        const cv::KeyPoint& kpB = keypointsB[indexB];
-        vector<int> selectedIdxsA = vector<int>();
-        vector<int> selectedIdxsB = vector<int>();
-        for (int i = 0; i < prevCddsSize; ++i) {
-            if (prevCandidates[i]->rect.contains(kpA.pt)) {
-                selectedIdxsA.push_back(i);
-            }
-        }
-
-        for (int j = 0; j < nextCddsSize; ++j) {
-            if (nextCandidates[j]->rect.contains(kpB.pt)) {
-                selectedIdxsB.push_back(j);
-            }
-        }
-
-        for (vector<int>::const_iterator itI = selectedIdxsA.cbegin();
-             itI != selectedIdxsA.cend();
-             ++itI) {
-            for (vector<int>::const_iterator itJ = selectedIdxsB.cbegin();
-                 itJ != selectedIdxsB.cend();
-                 ++itJ) {
-                const int i = *itI;
-                const int j = *itJ;
-                pc(i, j) += 1;
-            }
-        }
-    }
-
-    int nRows = pc.rows();
-    for (int rowIndex = 0; rowIndex < nRows; ++rowIndex) {
-        const Eigen::RowVectorXi& _row = pc.row(rowIndex);
-        int nDest = _row.sum();
-
-        Eigen::RowVectorXd row = _row.cast<double>();
-        row /= nDest;
-
-        memcpy(this->prob[rowIndex], row.data(), sizeof(double) * row.cols());
-    }
+    sift(imgA, cv::Mat(), this->keypointsA, this->descA);
+    sift(imgB, cv::Mat(), this->keypointsB, this->descB);
 }
 
+void SiftFaceAssociator::calculateProb() {
+    fc_v::size_type prevCddsSize, nextCddsSize;
+    prevCddsSize = this->prevCandidates.size();
+    nextCddsSize = this->nextCandidates.size();
 
+    // set random seed for random-picking matches later
+    srand(time(NULL));
+
+    // find max rect from each prev candidates
+    for (fc_v::size_type i = 0; i < prevCddsSize; ++i) {
+        cv::Rect bestFitBox;
+        this->computeBestFitBox(i, bestFitBox);
+        this->bestFitBoxes.push_back(bestFitBox);
+
+        for (fc_v::size_type j = 0; j < nextCddsSize; ++j) {
+            const cv::Rect& afterCddBox = this->nextCandidates[j]->rect;
+            cv::Rect intersection = bestFitBox & afterCddBox;
+            const int intersectArea = intersection.area();
+            this->prob[i][j] =
+                (double) intersectArea /
+                (double) (bestFitBox.area() +
+                          afterCddBox.area() -
+                          intersectArea);
+        }
+    }
+}
 
 void findSAB(Eigen::MatrixXd& matA, Eigen::VectorXd& matB, Eigen::VectorXd& matX)
 {
@@ -220,30 +183,10 @@ void findSAB(Eigen::MatrixXd& matA, Eigen::VectorXd& matB, Eigen::VectorXd& matX
     matX = (matAT * matA).inverse() * (matAT * matB);
 }
 
-void findSxSyAB(int N, int M, vector <double> &A, vector <double> &B, vector <double> &X)
-{
-    // find Sx, Sy, A, B by inverse
-    Eigen::MatrixXd _A(N, M);
-    Eigen::MatrixXd _B(N, 1);
-    Eigen::MatrixXd _X(M, 1);
-
-    for (int i = 0; i < N; i++) {
-        _B(i, 0) = B[i];
-        for (int j = 0; j < M; j++) {
-            _A(i, j) = A[i*M + j];
-        }
-    }
-    _X = _A.inverse()*_B;
-
-    for (int i = 0; i < M; i++)
-        X[i] = _X(i, 0);
-}
-
 void SiftFaceAssociator::calculateNextRect() {
 
-    fc_v::size_type prevCddsSize, nextCddsSize;
+    fc_v::size_type prevCddsSize;
     prevCddsSize = this->prevCandidates.size();
-    nextCddsSize = this->nextCandidates.size();
 
     cv::Scalar colorPreset[] = {
         CV_RGB(0, 255, 0),
@@ -254,113 +197,9 @@ void SiftFaceAssociator::calculateNextRect() {
         CV_RGB(0, 255, 255)
     };
 
-    cv::SIFT sift = cv::SIFT();
-    vector<cv::KeyPoint> keypointsA, keypointsB;
-    cv::Mat descA, descB;
-    cv::Mat imgA, imgB;
-
-    cv::cvtColor(this->prevFrame, imgA, CV_BGR2GRAY);
-    cv::cvtColor(this->nextFrame, imgB, CV_BGR2GRAY);
-
-    sift(imgA, cv::Mat(), keypointsA, descA);
-    sift(imgB, cv::Mat(), keypointsB, descB);
-
-    cv::Ptr<cv::DescriptorMatcher> matcher =
-        cv::DescriptorMatcher::create("BruteForce");
-
-    vector<cv::Mat> matchMasks; // match masks for each prevCandidates
-    this->computeMatchMasks(keypointsA, keypointsB, matchMasks);
-
-    vector< vector<cv::DMatch> > matches_list; // vector for all matches from each prev candidates
-
     // drawing the results
     cv::Mat img_matches;
     cv::Mat next = nextFrame.clone();
-
-    // set random seed for random-picking matches later
-    srand(time(NULL));
-
-    // find max rect from each prev candidates
-    for (fc_v::size_type i = 0; i < prevCddsSize; ++i) {
-        vector<cv::DMatch> matches;
-
-        matcher->match(descA, descB, matches, matchMasks[i]);
-        matches_list.push_back(matches);
-
-        vector<cv::Rect> rectCandidates; // vector for 10 rect candidates from each prev Candidates
-
-        for (int cnt_it = 0;
-             cnt_it < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT;
-             cnt_it++) {
-
-            // random-pick two matches
-            int idx_m1, idx_m2;
-            idx_m1 = rand() % matches.size();
-            idx_m2 = rand() % matches.size();
-
-            const cv::Rect& beforeRect = prevCandidates[i]->rect;
-            cv::Rect fitBox;
-            this->computeFitBox(matches[idx_m1], matches[idx_m2],
-                                keypointsA, keypointsB,
-                                beforeRect, fitBox);
-            rectCandidates.push_back(fitBox);
-        }
-
-        // count which is included to each rect Candidates among current prevCandidate's match keypointsB
-        vector<int> cnt_match(UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT, 0); // matched feature with each prev Candidate
-        vector<int> cnt_all(UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT, 0); // all matched feature
-
-        // calculate cnt_all
-        vector<cv::KeyPoint>::const_iterator itKeypB;
-        for (itKeypB = keypointsB.cbegin(); itKeypB != keypointsB.cend(); ++itKeypB) {
-            const cv::KeyPoint& target = *itKeypB;
-            for (int cnt_rc = 0;
-                 cnt_rc < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT;
-                 ++cnt_rc) {
-                if (rectCandidates[cnt_rc].contains(target.pt)) {
-                    cnt_all[cnt_rc]++;
-                }
-            }
-        }
-
-        // calculate cnt_match
-        for (vector<cv::DMatch>::const_iterator it = matches.cbegin();
-            it != matches.cend();
-            ++it){
-            const cv::DMatch& match = *it;
-            const cv::KeyPoint& target = keypointsB[match.trainIdx];
-            for (int cnt_rc = 0;
-                 cnt_rc < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT;
-                 ++cnt_rc) {
-                if (rectCandidates[cnt_rc].contains(target.pt)) {
-                    cnt_match[cnt_rc]++;
-                }
-            }
-        }
-
-        // find max ratio box
-        cv::Rect maxRect;
-        double max = -1.0f;
-        for (int cnt_rc = 0;
-             cnt_rc < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT;
-             ++cnt_rc) {
-            double inlierRatio = (double) cnt_match[cnt_rc] /
-                                 (double) cnt_all[cnt_rc];
-            if (inlierRatio > max) {
-                max = inlierRatio;
-                maxRect = rectCandidates[cnt_rc];
-            }
-        }
-
-        rectangle(next,
-            cvPoint(maxRect.x, maxRect.y),
-            cvPoint(maxRect.x + maxRect.width - 1, maxRect.y + maxRect.height),
-            colorPreset[i]);
-
-        // draw matches
-        drawMatches(imgA, keypointsA, next, keypointsB, matches, img_matches, colorPreset[i], cv::Scalar::all(-1), vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
-
-    }
 
     char filename[100];
     sprintf(filename, "output/result%d.jpg", result_cnt++);
@@ -368,35 +207,97 @@ void SiftFaceAssociator::calculateNextRect() {
 
 }
 
-void SiftFaceAssociator::computeMatchMasks(
-        std::vector<cv::KeyPoint>& keypointsA,
-        std::vector<cv::KeyPoint>& keypointsB,
-        std::vector<cv::Mat>& matchMasks) {
-    fc_v::size_type prevCddsSize = this->prevCandidates.size();
-    fc_v::size_type i;
+void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
+                                           cv::Rect& bestFitBox) {
+    const cv::Rect& queryBox = this->prevCandidates[queryIdx]->rect;
+    cv::Ptr<cv::DescriptorMatcher> matcher =
+        cv::DescriptorMatcher::create("BruteForce");
+    vector<cv::DMatch> matches;
+    cv::Mat matchMask;
 
-    for (i = 0; i < prevCddsSize; ++i) {
-        cv::Mat matchMask =
-            cv::Mat::zeros(keypointsA.size(), keypointsB.size(), CV_8UC1);
-        matchMasks.push_back(matchMask);
+    this->computeMatchMask(queryBox, matchMask);
+    matcher->match(descA, descB, matches, matchMask);
+
+    vector<cv::Rect> fitBoxes;
+    for (int cnt_it = 0;
+         cnt_it < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT;
+         cnt_it++) {
+
+        // random-pick two matches
+        int idx_m1, idx_m2;
+        idx_m1 = rand() % matches.size();
+        idx_m2 = rand() % matches.size();
+
+        cv::Rect fitBox;
+        this->computeFitBox(matches[idx_m1], matches[idx_m2],
+                            keypointsA, keypointsB,
+                            queryBox, fitBox);
+        fitBoxes.push_back(fitBox);
     }
+
+    // find the best fit box
+    double maxInlierRatio = -1.0f;
+    vector<cv::Rect>::const_iterator it;
+
+    for (it = fitBoxes.cbegin(); it != fitBoxes.cend(); ++it) {
+        const cv::Rect fitBox = *it;
+
+        // count the number of keypoints in fitBox
+        int cnt_all = 0;
+        vector<cv::KeyPoint>::const_iterator itKeypB;
+
+        for (itKeypB = keypointsB.cbegin(); itKeypB != keypointsB.cend(); ++itKeypB) {
+            const cv::KeyPoint& keypoint = *itKeypB;
+            if (fitBox.contains(keypoint.pt)) {
+                ++cnt_all;
+            }
+        }
+
+        // count the number of keypoints matched with ones from queryBox
+        int cnt_match = 0;
+        vector<cv::DMatch>::const_iterator itMatches;
+
+        for (itMatches = matches.cbegin();
+             itMatches != matches.cend();
+             ++itMatches) {
+            const cv::DMatch& match = *itMatches;
+            const cv::KeyPoint& keypoint = this->keypointsB[match.trainIdx];
+            if (fitBox.contains(keypoint.pt)) {
+                ++cnt_match;
+            }
+        }
+
+        // compute inlier ratio and compare to maxInlierRatio
+        double inlierRatio = (double) cnt_match / (double) cnt_all;
+        if (inlierRatio > maxInlierRatio) {
+            maxInlierRatio = inlierRatio;
+            bestFitBox = fitBox;
+        }
+    }
+    /*
+    rectangle(next,
+        cvPoint(maxRect.x, maxRect.y),
+        cvPoint(maxRect.x + maxRect.width - 1, maxRect.y + maxRect.height),
+        colorPreset[i]);
+
+    // draw matches
+    drawMatches(imgA, keypointsA, next, keypointsB, matches, img_matches, colorPreset[i], cv::Scalar::all(-1), vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+    */
+}
+
+void SiftFaceAssociator::computeMatchMask(const cv::Rect& beforeRect,
+                                          cv::Mat& matchMask) {
+    const vector<cv::KeyPoint>& keypointsA = this->keypointsA;
+    const vector<cv::KeyPoint>& keypointsB = this->keypointsB;
+    matchMask = cv::Mat::zeros(keypointsA.size(), keypointsB.size(), CV_8UC1);
 
     for (vector<cv::KeyPoint>::const_iterator it = keypointsA.cbegin();
          it != keypointsA.cend();
          ++it) {
         const cv::KeyPoint& kpA = *it;
         vector<cv::KeyPoint>::size_type i = it - keypointsA.cbegin();
-        fc_v::size_type j;
-
-        for (j = 0; j < prevCddsSize; ++j) {
-            cv::Mat& matchMask = matchMasks[j];
-
-            if (prevCandidates[j]->rect.contains(kpA.pt)) {
-                matchMask.row(i).setTo(1);
-            }
-            else {
-                matchMask.row(i).setTo(0);
-            }
+        if (beforeRect.contains(kpA.pt)) {
+            matchMask.row(i).setTo(1);
         }
     }
 }

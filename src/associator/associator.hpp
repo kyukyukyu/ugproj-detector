@@ -88,9 +88,14 @@ namespace ugproj {
         private:
             const cv::Mat& prevFrame;
             const cv::Mat& nextFrame;
-            void computeMatchMasks(std::vector<cv::KeyPoint>& keypointsA,
-                                   std::vector<cv::KeyPoint>& keypointsB,
-                                   std::vector<cv::Mat>& matchMasks);
+            std::vector<cv::DMatch> matches;
+            std::vector<cv::KeyPoint> keypointsA;
+            std::vector<cv::KeyPoint> keypointsB;
+            cv::Mat descA;
+            cv::Mat descB;
+            std::vector<cv::Rect> bestFitBoxes;
+            void computeBestFitBox(fc_v::size_type queryIdx, cv::Rect& bestFitBox);
+            void computeMatchMask(const cv::Rect& beforeRect, cv::Mat& matchMask);
             void computeFitBox(const cv::DMatch& match1,
                                const cv::DMatch& match2,
                                const std::vector<cv::KeyPoint>& keypointsA,
@@ -99,16 +104,12 @@ namespace ugproj {
                                cv::Rect& fitBox) const;
 
         public:
-            SiftFaceAssociator(
-                    std::vector<Face>& faces,
-                    fc_v& prevCandidates,
-                    fc_v& nextCandidates,
-                    const cv::Mat& prevFrame,
-                    const cv::Mat& nextFrame,
-                    double threshold):
-                FaceAssociator(faces, prevCandidates, nextCandidates,
-                               threshold),
-                prevFrame(prevFrame), nextFrame(nextFrame) {};
+            SiftFaceAssociator(std::vector<Face>& faces,
+                               fc_v& prevCandidates,
+                               fc_v& nextCandidates,
+                               const cv::Mat& prevFrame,
+                               const cv::Mat& nextFrame,
+                               double threshold);
             void calculateProb();
             void calculateNextRect();
     };

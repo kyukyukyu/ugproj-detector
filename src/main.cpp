@@ -172,6 +172,9 @@ add_all:
 
             }
             associator->associate();
+            // TODO: implement this
+            cv::Mat matchImg;
+            visualize(associator);
             delete associator;
             printf("done.\n");
         }
