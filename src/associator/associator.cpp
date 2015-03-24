@@ -307,7 +307,6 @@ void SiftFaceAssociator::calculateNextRect() {
         }
 
         // count which is included to each rect Candidates among current prevCandidate's match keypointsB
-        printf("\ncalculate inlier ratio\n");
         vector<int> cnt_match(UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT, 0); // matched feature with each prev Candidate
         vector<int> cnt_all(UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT, 0); // all matched feature
 
@@ -341,8 +340,7 @@ void SiftFaceAssociator::calculateNextRect() {
 
         // find max ratio box
         cv::Rect maxRect;
-        double max = 0;
-        printf("find Max Ratio Box\n");
+        double max = -1.0f;
         for (int cnt_rc = 0;
              cnt_rc < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT;
              ++cnt_rc) {
@@ -354,7 +352,6 @@ void SiftFaceAssociator::calculateNextRect() {
             }
         }
 
-        printf("Max Rect (%d,%d) - (%d,%d)\n", maxRect.x, maxRect.y, maxRect.x + maxRect.width - 1, maxRect.y + maxRect.height);
         rectangle(next,
             cvPoint(maxRect.x, maxRect.y),
             cvPoint(maxRect.x + maxRect.width - 1, maxRect.y + maxRect.height),
