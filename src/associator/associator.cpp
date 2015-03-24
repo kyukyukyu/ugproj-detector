@@ -241,7 +241,7 @@ void findSxSyAB(int N, int M, vector <double> &A, vector <double> &B, vector <do
 
 void SiftFaceAssociator::calculateNextRect() {
 
-    int prevCddsSize, nextCddsSize;
+    fc_v::size_type prevCddsSize, nextCddsSize;
     prevCddsSize = this->prevCandidates.size();
     nextCddsSize = this->nextCandidates.size();
 
@@ -277,86 +277,87 @@ void SiftFaceAssociator::calculateNextRect() {
     cv::Mat img_matches;
     cv::Mat next = nextFrame.clone();
 
+    // set random seed for random-picking matches later
+    srand(time(NULL));
+
     // find max rect from each prev candidates
-    for (int i = 0; i < prevCddsSize; ++i) {
+    for (fc_v::size_type i = 0; i < prevCddsSize; ++i) {
         vector<cv::DMatch> matches;
+
+        matcher->match(descA, descB, matches, matchMasks[i]);
         matches_list.push_back(matches);
 
-        // split each prevCandidates' matches with match mask
-        matcher->match(descA, descB, matches, matchMasks[i]);
-
-        vector< vector<cv::Rect> > eachRectCandidates; // vector for all rect candidates
         vector<cv::Rect> rectCandidates; // vector for 10 rect candidates from each prev Candidates
 
-        srand(time(NULL));
         for (int cnt_it = 0;
              cnt_it < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT;
              cnt_it++) {
 
-            // pick random match pointer
-            int idx_m1, idx_m2, idx_bp1, idx_bp2, idx_ap1, idx_ap2;
-
+            // random-pick two matches
+            int idx_m1, idx_m2;
             idx_m1 = rand() % matches.size();
             idx_m2 = rand() % matches.size();
 
+            // keypoint indices of random-picked matches
+            // bp is for 'before (key)point', ap is for 'after (key)point'
+            int idx_bp1, idx_bp2, idx_ap1, idx_ap2;
             idx_bp1 = matches[idx_m1].queryIdx;
             idx_bp2 = matches[idx_m2].queryIdx;
             idx_ap1 = matches[idx_m1].trainIdx;
             idx_ap2 = matches[idx_m2].trainIdx;
 
-            int x1, y1, x2, y2, ax1, ay1, ax2, ay2;
-
+            int x1, y1, x2, y2;
             x1 = keypointsA[idx_bp1].pt.x;
             y1 = keypointsA[idx_bp1].pt.y;
             x2 = keypointsA[idx_bp2].pt.x;
             y2 = keypointsA[idx_bp2].pt.y;
 
-            ax1 = keypointsB[idx_ap1].pt.x;
-            ay1 = keypointsB[idx_ap1].pt.y;
-            ax2 = keypointsB[idx_ap2].pt.x;
-            ay2 = keypointsB[idx_ap2].pt.y;
+            int sx1, sy1, sx2, sy2;
+            sx1 = keypointsB[idx_ap1].pt.x;
+            sy1 = keypointsB[idx_ap1].pt.y;
+            sx2 = keypointsB[idx_ap2].pt.x;
+            sy2 = keypointsB[idx_ap2].pt.y;
 
-            // calculate pseudo inverse or inverse
+            // compute pseudo inverse
             Eigen::MatrixXd matA(4, 3);
             Eigen::VectorXd matB(4);
             Eigen::VectorXd matX;
-
+            double s, a, b;
             matA << x1, 1, 0,
                     x2, 1, 0,
                     y1, 0, 1,
                     y2, 0, 1;
-            matB << ax1, ax2, ay1, ay2;
-
+            matB << sx1, sx2, sy1, sy2;
             findSAB(matA, matB, matX);
+            s = matX[0];
+            a = matX[1];
+            b = matX[2];
 
-            cv::Rect calculatedRect;
-            calculatedRect = prevCandidates[i]->rect;
-            int bef_x1 = calculatedRect.x;
-            int bef_y1 = calculatedRect.y;
-            int bef_x2 = calculatedRect.x + calculatedRect.width - 1;
-            int bef_y2 = calculatedRect.y + calculatedRect.height - 1;
+            const cv::Rect& beforeRect = prevCandidates[i]->rect;
+            int bef_x1 = beforeRect.x;
+            int bef_y1 = beforeRect.y;
+            int bef_x2 = beforeRect.x + beforeRect.width - 1;
+            int bef_y2 = beforeRect.y + beforeRect.height - 1;
 
             // when pseudo inverse
-            int aft_x1 = (int)(matX[0] * (double)bef_x1 + matX[1]);
-            int aft_y1 = (int)(matX[0] * (double)bef_y1 + matX[2]);
-            int aft_x2 = (int)(matX[0] * (double)bef_x2 + matX[1]);
-            int aft_y2 = (int)(matX[0] * (double)bef_y2 + matX[2]);
+            int aft_x1 = (int)(s * (double)bef_x1 + a);
+            int aft_y1 = (int)(s * (double)bef_y1 + b);
+            int aft_x2 = (int)(s * (double)bef_x2 + a);
+            int aft_y2 = (int)(s * (double)bef_y2 + b);
 
-            // cut boundry
+            // keep in boundary
             aft_x1 = std::min( std::max(0, aft_x1), imgA.size().width - 1 );
             aft_y1 = std::min( std::max(0, aft_y1), imgA.size().height - 1 );
             aft_x2 = std::min( std::max(0, aft_x2), imgA.size().width - 1 );
             aft_y2 = std::min( std::max(0, aft_y2), imgA.size().height - 1 );
 
-            calculatedRect.x = aft_x1;
-            calculatedRect.y = aft_y1;
-            calculatedRect.width = aft_x2 - aft_x1;
-            calculatedRect.height = aft_y2 - aft_y1;
-
-            rectCandidates.push_back(calculatedRect);
-
+            cv::Rect fitBox;
+            fitBox.x = aft_x1;
+            fitBox.y = aft_y1;
+            fitBox.width = aft_x2 - aft_x1;
+            fitBox.height = aft_y2 - aft_y1;
+            rectCandidates.push_back(fitBox);
         }
-        eachRectCandidates.push_back(rectCandidates);
 
         // count which is included to each rect Candidates among current prevCandidate's match keypointsB
         printf("\ncalculate inlier ratio\n");
