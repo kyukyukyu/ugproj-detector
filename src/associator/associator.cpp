@@ -180,12 +180,6 @@ void SiftFaceAssociator::calculateProb() {
     }
 }
 
-void findSAB(Eigen::MatrixXd& matA, Eigen::VectorXd& matB, Eigen::VectorXd& matX)
-{
-    Eigen::MatrixXd matAT = matA.transpose();
-    matX = (matAT * matA).inverse() * (matAT * matB);
-}
-
 void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
                                            Fit* bestFit) {
     const cv::Rect& queryBox = this->prevCandidates[queryIdx]->rect;
@@ -314,7 +308,7 @@ void SiftFaceAssociator::computeFitBox(
 
     // compute pseudo inverse
     Eigen::MatrixXd matA(4, 3);
-    Eigen::VectorXd matB(4);
+    Eigen::Vector4d matB;
     Eigen::VectorXd matX;
     double s, a, b;
     matA << x1 - origin.x, 1, 0,
@@ -325,7 +319,7 @@ void SiftFaceAssociator::computeFitBox(
             sx2 - origin.x,
             sy1 - origin.y,
             sy2 - origin.y;
-    findSAB(matA, matB, matX);
+    matX = matA.colPivHouseholderQr().solve(matB);
     s = matX[0];
     a = matX[1];
     b = matX[2];
