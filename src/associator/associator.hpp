@@ -94,7 +94,9 @@ namespace ugproj {
             cv::Mat descA;
             cv::Mat descB;
             std::vector<cv::Rect> bestFitBoxes;
-            void computeBestFitBox(fc_v::size_type queryIdx, cv::Rect& bestFitBox);
+            void computeBestFitBox(fc_v::size_type queryIdx,
+                                   cv::Rect& bestFitBox,
+                                   std::vector<cv::DMatch>* bestMatches);
             void computeMatchMask(const cv::Rect& beforeRect, cv::Mat& matchMask);
             void computeFitBox(const cv::DMatch& match1,
                                const cv::DMatch& match2,

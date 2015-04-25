@@ -161,8 +161,12 @@ void SiftFaceAssociator::calculateProb() {
     // find max rect from each prev candidates
     for (fc_v::size_type i = 0; i < prevCddsSize; ++i) {
         cv::Rect bestFitBox;
-        this->computeBestFitBox(i, bestFitBox);
+        vector<cv::DMatch> bestMatches;
+        this->computeBestFitBox(i, bestFitBox, &bestMatches);
         this->bestFitBoxes.push_back(bestFitBox);
+        this->matches.insert(this->matches.cend(),
+                             bestMatches.begin(),
+                             bestMatches.end());
 
         for (fc_v::size_type j = 0; j < nextCddsSize; ++j) {
             const cv::Rect& afterCddBox = this->nextCandidates[j]->rect;
@@ -184,7 +188,8 @@ void findSAB(Eigen::MatrixXd& matA, Eigen::VectorXd& matB, Eigen::VectorXd& matX
 }
 
 void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
-                                           cv::Rect& bestFitBox) {
+                                           cv::Rect& bestFitBox,
+                                           std::vector<cv::DMatch>* bestMatches) {
     const cv::Rect& queryBox = this->prevCandidates[queryIdx]->rect;
     cv::Ptr<cv::DescriptorMatcher> matcher =
         cv::DescriptorMatcher::create("BruteForce");
@@ -248,6 +253,7 @@ void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
         if (inlierRatio > maxInlierRatio) {
             maxInlierRatio = inlierRatio;
             bestFitBox = fitBox;
+            *bestMatches = matches;
         }
     }
 }
@@ -382,5 +388,9 @@ void SiftFaceAssociator::visualize(cv::Mat& img) {
                     _nextFrame,
                     this->keypointsB,
                     this->matches,
-                    img);
+                    img,
+                    cv::Scalar::all(-1),    // random colors for matchColor
+                    cv::Scalar::all(-1),    // random colors for singlePointColor
+                    std::vector<char>(),    // empty matchMask
+                    cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 }
