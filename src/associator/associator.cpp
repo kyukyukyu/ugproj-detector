@@ -198,20 +198,24 @@ void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
     matcher->match(descA, descB, matches, matchMask);
 
     vector<cv::Rect> fitBoxes;
-    for (int cnt_it = 0;
-         cnt_it < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT;
-         cnt_it++) {
-
+    int i = 0;
+    while (i < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT) {
         // random-pick two matches
         int idx_m1, idx_m2;
         idx_m1 = rand() % matches.size();
         idx_m2 = rand() % matches.size();
+        if (idx_m1 == idx_m2 && matches.size() > 1) {
+            // same match picked: try again
+            continue;
+        }
 
         cv::Rect fitBox;
         this->computeFitBox(matches[idx_m1], matches[idx_m2],
                             keypointsA, keypointsB,
                             queryBox, fitBox);
         fitBoxes.push_back(fitBox);
+
+        ++i;
     }
 
     // find the best fit box
