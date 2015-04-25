@@ -162,12 +162,9 @@ void SiftFaceAssociator::calculateProb() {
     // find max rect from each prev candidates
     for (fc_v::size_type i = 0; i < prevCddsSize; ++i) {
         cv::Rect bestFitBox;
-        vector<cv::DMatch> bestMatches;
-        this->computeBestFitBox(i, bestFitBox, &bestMatches);
-        this->bestFitBoxes.push_back(bestFitBox);
-        this->matches.insert(this->matches.cend(),
-                             bestMatches.begin(),
-                             bestMatches.end());
+        Fit bestFit;
+        this->computeBestFitBox(i, &bestFit);
+        this->bestFits.push_back(bestFit);
 
         for (fc_v::size_type j = 0; j < nextCddsSize; ++j) {
             const cv::Rect& afterCddBox = this->nextCandidates[j]->rect;
@@ -189,8 +186,7 @@ void findSAB(Eigen::MatrixXd& matA, Eigen::VectorXd& matB, Eigen::VectorXd& matX
 }
 
 void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
-                                           cv::Rect& bestFitBox,
-                                           std::vector<cv::DMatch>* bestMatches) {
+                                           Fit* bestFit) {
     const cv::Rect& queryBox = this->prevCandidates[queryIdx]->rect;
     cv::Ptr<cv::DescriptorMatcher> matcher =
         cv::DescriptorMatcher::create("BruteForce");
@@ -219,6 +215,7 @@ void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
 
     // find the best fit box
     double maxInlierRatio = -1.0f;
+    Fit best_fit;
     vector<cv::Rect>::const_iterator it;
 
     for (it = fitBoxes.cbegin(); it != fitBoxes.cend(); ++it) {
@@ -253,10 +250,13 @@ void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
         double inlierRatio = (double) cnt_match / (double) cnt_all;
         if (inlierRatio > maxInlierRatio) {
             maxInlierRatio = inlierRatio;
-            bestFitBox = fitBox;
-            *bestMatches = matches;
+            best_fit.box = fitBox;
+            best_fit.matches = matches;
+            best_fit.num_inlier = cnt_match;
         }
     }
+
+    *bestFit = best_fit;
 }
 
 void SiftFaceAssociator::computeMatchMask(const cv::Rect& beforeRect,
@@ -376,8 +376,11 @@ void SiftFaceAssociator::visualize(cv::Mat& img) {
                       cddBox.tl(), cddBox.br(),
                       color);
 
+        // retrieve best fit
+        const Fit& bestFit = this->bestFits[i];
+
         // draw best fit box on _nextFrame
-        const cv::Rect& fitBox = this->bestFitBoxes[i];
+        const cv::Rect& fitBox = bestFit.box;
         cv::rectangle(_nextFrame,
                       fitBox.tl(), fitBox.br(),
                       color);
@@ -394,12 +397,20 @@ void SiftFaceAssociator::visualize(cv::Mat& img) {
                     color);
     }
 
+    // consolidate matches
+    vector<cv::DMatch> matches;
+    vector<Fit>::const_iterator it;
+    for (it = this->bestFits.cbegin(); it != this->bestFits.cend(); ++it) {
+        const Fit& f = *it;
+        matches.insert(matches.end(), f.matches.begin(), f.matches.end());
+    }
+
     // draw matches
     cv::drawMatches(_prevFrame,
                     this->keypointsA,
                     _nextFrame,
                     this->keypointsB,
-                    this->matches,
+                    matches,
                     img,
                     cv::Scalar::all(-1),    // random colors for matchColor
                     cv::Scalar::all(-1),    // random colors for singlePointColor

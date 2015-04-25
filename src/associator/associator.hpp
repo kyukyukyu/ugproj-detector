@@ -86,17 +86,26 @@ namespace ugproj {
 
     class SiftFaceAssociator : public FaceAssociator {
         private:
+            struct Fit {
+                cv::Rect box;
+                std::vector<cv::DMatch> matches;
+                int num_inlier;
+                inline int num_keyp_former() const {
+                    return this->matches.size();
+                }
+                inline double inlier_ratio() const {
+                    return (double) this->num_inlier / this->num_keyp_former();
+                }
+            };
             const cv::Mat& prevFrame;
             const cv::Mat& nextFrame;
-            std::vector<cv::DMatch> matches;
             std::vector<cv::KeyPoint> keypointsA;
             std::vector<cv::KeyPoint> keypointsB;
             cv::Mat descA;
             cv::Mat descB;
-            std::vector<cv::Rect> bestFitBoxes;
+            std::vector<Fit> bestFits;
             void computeBestFitBox(fc_v::size_type queryIdx,
-                                   cv::Rect& bestFitBox,
-                                   std::vector<cv::DMatch>* bestMatches);
+                                   Fit* bestFit);
             void computeMatchMask(const cv::Rect& beforeRect, cv::Mat& matchMask);
             void computeFitBox(const cv::DMatch& match1,
                                const cv::DMatch& match2,
