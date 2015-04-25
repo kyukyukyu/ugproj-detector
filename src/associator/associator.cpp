@@ -12,7 +12,7 @@
 
 #include <cstring>
 #include <cstdlib>
-#include <time.h>
+#include <ctime>
 #include <utility>
 
 using namespace ugproj;
