@@ -385,13 +385,30 @@ void SiftFaceAssociator::visualize(cv::Mat& img) {
                       fitBox.tl(), fitBox.br(),
                       color);
 
-        // compute the scale and draw this below the best fit box
+        // compute the scale and draw this and inlier information
+        // below the best fit box
         const double scale = (double) fitBox.width / (double) cddBox.width;
         stringstream ss;
+        string text;
+        cv::Size text_size;
+        int baseline;
         ss << "s: " << scale << " (1/" << (1 / scale) << ")";
+        text = ss.str();
+        text_size =
+                cv::getTextSize(text, CV_FONT_HERSHEY_PLAIN, 1.0, 1, &baseline);
         cv::putText(_nextFrame,
-                    ss.str(),
+                    text,
                     fitBox.tl() - cv::Point(0, 4),
+                    CV_FONT_HERSHEY_PLAIN,
+                    1.0,
+                    color);
+        ss.str("");
+        ss << "# of inliers: " << bestFit.num_inlier << "("
+           << bestFit.inlier_ratio() * 100 << "%)";
+        text = ss.str();
+        cv::putText(_nextFrame,
+                    text,
+                    fitBox.tl() - cv::Point(0, 4 + text_size.height + 4),
                     CV_FONT_HERSHEY_PLAIN,
                     1.0,
                     color);
