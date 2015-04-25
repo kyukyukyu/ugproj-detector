@@ -276,6 +276,10 @@ void SiftFaceAssociator::computeFitBox(
         const std::vector<cv::KeyPoint>& keypointsB,
         const cv::Rect& beforeRect,
         cv::Rect& fitBox) const {
+    // The top-left point of beforeRect is needed to set this as origin for
+    // computation
+    cv::Point origin = beforeRect.tl();
+
     // keypoint indices of random-picked matches
     // bp is for 'before (key)point', ap is for 'after (key)point'
     int idx_bp1, idx_bp2, idx_ap1, idx_ap2;
@@ -301,11 +305,14 @@ void SiftFaceAssociator::computeFitBox(
     Eigen::VectorXd matB(4);
     Eigen::VectorXd matX;
     double s, a, b;
-    matA << x1, 1, 0,
-            x2, 1, 0,
-            y1, 0, 1,
-            y2, 0, 1;
-    matB << sx1, sx2, sy1, sy2;
+    matA << x1 - origin.x, 1, 0,
+            x2 - origin.x, 1, 0,
+            y1 - origin.y, 0, 1,
+            y2 - origin.y, 0, 1;
+    matB << sx1 - origin.x,
+            sx2 - origin.x,
+            sy1 - origin.y,
+            sy2 - origin.y;
     findSAB(matA, matB, matX);
     s = matX[0];
     a = matX[1];
