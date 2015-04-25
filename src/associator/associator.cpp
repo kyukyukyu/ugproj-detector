@@ -13,6 +13,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <ctime>
+#include <sstream>
 #include <utility>
 
 using namespace ugproj;
@@ -380,6 +381,17 @@ void SiftFaceAssociator::visualize(cv::Mat& img) {
         cv::rectangle(_nextFrame,
                       fitBox.tl(), fitBox.br(),
                       color);
+
+        // compute the scale and draw this below the best fit box
+        const double scale = (double) fitBox.width / (double) cddBox.width;
+        stringstream ss;
+        ss << "s: " << scale << " (1/" << (1 / scale) << ")";
+        cv::putText(_nextFrame,
+                    ss.str(),
+                    fitBox.tl() - cv::Point(0, 4),
+                    CV_FONT_HERSHEY_PLAIN,
+                    1.0,
+                    color);
     }
 
     // draw matches
