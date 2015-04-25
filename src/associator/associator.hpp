@@ -113,6 +113,9 @@ namespace ugproj {
                                const std::vector<cv::KeyPoint>& keypointsB,
                                const cv::Rect& beforeRect,
                                cv::Rect& fitBox) const;
+            inline cv::Scalar color_for(const fc_v::size_type cdd_index);
+            void draw_best_fit(const fc_v::size_type cdd_index,
+                               cv::Mat* match_img);
 
         public:
             SiftFaceAssociator(std::vector<Face>& faces,

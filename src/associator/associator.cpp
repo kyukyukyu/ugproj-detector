@@ -10,6 +10,7 @@
 
 #include <boost/random.hpp>
 
+#include <algorithm>
 #include <cstring>
 #include <cstdlib>
 #include <ctime>
@@ -368,50 +369,13 @@ void SiftFaceAssociator::visualize(cv::Mat& img) {
     fc_v::size_type i;
     for (i = 0; i < this->prevCandidates.size(); ++i) {
         // set color
-        cv::Scalar& color = colorPreset[i % nColorPreset];
+        const cv::Scalar color = this->color_for(i);
 
         // draw candidate box on _prevFrame
         const cv::Rect& cddBox = this->prevCandidates[i]->rect;
         cv::rectangle(_prevFrame,
                       cddBox.tl(), cddBox.br(),
                       color);
-
-        // retrieve best fit
-        const Fit& bestFit = this->bestFits[i];
-
-        // draw best fit box on _nextFrame
-        const cv::Rect& fitBox = bestFit.box;
-        cv::rectangle(_nextFrame,
-                      fitBox.tl(), fitBox.br(),
-                      color);
-
-        // compute the scale and draw this and inlier information
-        // below the best fit box
-        const double scale = (double) fitBox.width / (double) cddBox.width;
-        stringstream ss;
-        string text;
-        cv::Size text_size;
-        int baseline;
-        ss << "s: " << scale << " (1/" << (1 / scale) << ")";
-        text = ss.str();
-        text_size =
-                cv::getTextSize(text, CV_FONT_HERSHEY_PLAIN, 1.0, 1, &baseline);
-        cv::putText(_nextFrame,
-                    text,
-                    fitBox.tl() - cv::Point(0, 4),
-                    CV_FONT_HERSHEY_PLAIN,
-                    1.0,
-                    color);
-        ss.str("");
-        ss << "# of inliers: " << bestFit.num_inlier << "("
-           << bestFit.inlier_ratio() * 100 << "%)";
-        text = ss.str();
-        cv::putText(_nextFrame,
-                    text,
-                    fitBox.tl() - cv::Point(0, 4 + text_size.height + 4),
-                    CV_FONT_HERSHEY_PLAIN,
-                    1.0,
-                    color);
     }
 
     // consolidate matches
@@ -433,4 +397,80 @@ void SiftFaceAssociator::visualize(cv::Mat& img) {
                     cv::Scalar::all(-1),    // random colors for singlePointColor
                     std::vector<char>(),    // empty matchMask
                     cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+
+    for (i = 0; i < this->prevCandidates.size(); ++i) {
+        this->draw_best_fit(i, &img);
+    }
+}
+
+inline cv::Scalar SiftFaceAssociator::color_for(const fc_v::size_type cdd_index) {
+    return colorPreset[cdd_index % nColorPreset];
+}
+
+void SiftFaceAssociator::draw_best_fit(const fc_v::size_type cdd_index,
+                                       cv::Mat* match_img) {
+    // offset to draw best fit on latter frame
+    cv::Point offset_x = cv::Point(this->nextFrame.cols, 0);
+
+    const Fit& bestFit = this->bestFits[cdd_index];
+
+    // draw best fit box
+    const cv::Rect& fitBox = bestFit.box;
+    const cv::Scalar color = this->color_for(cdd_index);
+    cv::rectangle(*match_img,
+                  fitBox.tl() + offset_x, fitBox.br() + offset_x,
+                  color);
+
+    // compute the scale and draw this and inlier information
+    // below the best fit box
+    const cv::Rect& cddBox = this->prevCandidates[cdd_index]->rect;
+    const double scale = (double) fitBox.width / (double) cddBox.width;
+
+    // generate text to draw
+    stringstream ss;
+    string text_1, text_2;
+    ss << "s: " << scale << " (1/" << (1 / scale) << ")";
+    text_1 = ss.str();
+    ss.str("");
+    ss << "# of inliers: " << bestFit.num_inlier << "("
+       << bestFit.inlier_ratio() * 100 << "%)";
+    text_2 = ss.str();
+
+    // compute text offset from box
+    cv::Point offset_text;
+    int baseline;
+    const cv::Size text_1_size =
+            cv::getTextSize(text_1, CV_FONT_HERSHEY_PLAIN, 1.0, 1, &baseline);
+    const cv::Size text_2_size =
+            cv::getTextSize(text_2, CV_FONT_HERSHEY_PLAIN, 1.0, 1, &baseline);
+    const int text_width = std::max(text_1_size.width, text_2_size.width);
+    const int text_height = text_1_size.height + 4 + text_2_size.height + 4;
+    const cv::Point tl_box = fitBox.tl() + offset_x;
+    if (tl_box.y - text_height < 0) {
+        // Text will overflow if it is placed above the box.
+        // Hence, place it over the box.
+        offset_text = cv::Point(0, fitBox.height + text_height);
+    } else {
+        offset_text = cv::Point(0, -4);
+    }
+    if (tl_box.x + text_width > 2 * this->prevFrame.cols) {
+        // Text will overflow if it is left-aligned to the box.
+        // Hence, align to right.
+        offset_text.x -= text_width - fitBox.width;
+    }
+
+    // draw text
+    cv::putText(*match_img,
+                text_2,
+                tl_box + offset_text,
+                CV_FONT_HERSHEY_PLAIN,
+                1.0,
+                color);
+    cv::putText(*match_img,
+                text_1,
+                tl_box + offset_text
+                - cv::Point(0, 4 + text_2_size.height),
+                CV_FONT_HERSHEY_PLAIN,
+                1.0,
+                color);
 }
