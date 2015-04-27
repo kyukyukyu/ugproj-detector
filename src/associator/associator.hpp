@@ -116,6 +116,8 @@ namespace ugproj {
             inline cv::Scalar color_for(const fc_v::size_type cdd_index);
             void draw_best_fit(const fc_v::size_type cdd_index,
                                cv::Mat* match_img);
+            void draw_next_candidates(const fc_v::size_type cdd_index,
+                cv::Mat* next_frame);
 
         public:
             SiftFaceAssociator(std::vector<Face>& faces,

@@ -375,6 +375,10 @@ void SiftFaceAssociator::visualize(cv::Mat& img) {
                       cddBox.tl(), cddBox.br(),
                       color);
     }
+    // write next candidates
+    for (i = 0; i < this->nextCandidates.size(); ++i) {
+        this->draw_next_candidates(i, &_nextFrame);
+    }
 
     // consolidate matches
     vector<cv::DMatch> matches;
@@ -471,4 +475,52 @@ void SiftFaceAssociator::draw_best_fit(const fc_v::size_type cdd_index,
                 CV_FONT_HERSHEY_PLAIN,
                 1.0,
                 color);
+}
+
+void SiftFaceAssociator::draw_next_candidates(const fc_v::size_type cdd_index, cv::Mat* next_frame){
+    // set color
+    const cv::Scalar color = this->color_for(cdd_index);
+
+    // draw candidate box on _prevFrame
+    const cv::Rect& cddBox = this->nextCandidates[cdd_index]->rect;
+    cv::rectangle(*next_frame,
+        cddBox.tl(), cddBox.br(),
+        color);
+
+    // generate text to draw
+    stringstream ss;
+    string text;
+    ss << "next " << cdd_index;
+    text = ss.str();
+
+   
+    // compute text offset from box
+    cv::Point offset_text;
+    int baseline;
+    const cv::Size text_size =
+        cv::getTextSize(text, CV_FONT_HERSHEY_PLAIN, 1.0, 1, &baseline);
+    const int text_width = text_size.width;
+    const int text_height = text_size.height + 4;
+    const cv::Point tl_box = cddBox.tl();
+    if (tl_box.y - text_height < 0) {
+        // Text will overflow if it is placed above the box.
+        // Hence, place it over the box.
+        offset_text = cv::Point(0, cddBox.height + text_height);
+    }
+    else {
+        offset_text = cv::Point(0, 12 + cddBox.height);
+    }
+    if (tl_box.x + text_width > 2 * this->prevFrame.cols) {
+        // Text will overflow if it is left-aligned to the box.
+        // Hence, align to right.
+        offset_text.x -= text_width - cddBox.width;
+    }
+
+    // draw text
+    cv::putText(*next_frame,
+        text,
+        tl_box + offset_text,
+        CV_FONT_HERSHEY_PLAIN,
+        1.0,
+        color);
 }

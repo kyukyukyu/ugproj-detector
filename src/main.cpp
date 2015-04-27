@@ -87,6 +87,7 @@ int main(int argc, const char** argv) {
     FaceAssociator::fc_v *prevCandidates = NULL, *currCandidates = NULL;
 
     while (pos < frameCount) {
+       
         cap.grab();     // grab next frame
         if (fmod(pos, sourceFps / targetFps) - 1.0 > -DOUBLE_EPSILON) {
             ++pos;
@@ -98,6 +99,14 @@ int main(int argc, const char** argv) {
 
         // save frame index - frame number mapping
         frameNumbers.push_back(pos);
+
+        /*
+        // pruning range for test
+        if (pos < 224 || pos>245){ 
+            pos++;
+            continue;
+        }
+        */
 
         // calculate optical flow if this is not the first frame
         if (associationMethod == optflow && index > 0) {
@@ -185,9 +194,14 @@ add_all:
                 ((SiftFaceAssociator*) associator)->visualize(matchImg);
 
                 ostringstream ss;
+                /*
                 ss << "match_"
                    << std::setw(3) << std::setfill('0')
                    << std::setprecision(3) << pos << ".jpg";
+                */
+                ss << "print_next_candidates_"
+                    << std::setw(3) << std::setfill('0')
+                    << std::setprecision(3) << pos << ".jpg";
 
                 fs::path matchFilepath = outputPath / fs::path(ss.str());
                 imwrite(matchFilepath.string(), matchImg);
