@@ -162,11 +162,11 @@ void SiftFaceAssociator::calculateProb() {
 
     // find max rect from each prev candidates
     for (fc_v::size_type i = 0; i < prevCddsSize; ++i) {
-        cv::Rect bestFitBox;
         Fit bestFit;
         this->computeBestFitBox(i, &bestFit);
         this->bestFits.push_back(bestFit);
 
+        const cv::Rect& bestFitBox = bestFit.box;
         for (fc_v::size_type j = 0; j < nextCddsSize; ++j) {
             const cv::Rect& afterCddBox = this->nextCandidates[j]->rect;
             cv::Rect intersection = bestFitBox & afterCddBox;
@@ -493,7 +493,6 @@ void SiftFaceAssociator::draw_next_candidates(const fc_v::size_type cdd_index, c
     ss << "next " << cdd_index;
     text = ss.str();
 
-   
     // compute text offset from box
     cv::Point offset_text;
     int baseline;
