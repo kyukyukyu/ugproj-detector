@@ -306,7 +306,7 @@ void SiftFaceAssociator::computeFitBox(
     sx2 = keypointsB[idx_ap2].pt.x;
     sy2 = keypointsB[idx_ap2].pt.y;
 
-    // compute pseudo inverse
+    // solve linear system
     Eigen::MatrixXd matA(4, 3);
     Eigen::Vector4d matB;
     Eigen::VectorXd matX;
@@ -324,28 +324,22 @@ void SiftFaceAssociator::computeFitBox(
     a = matX[1];
     b = matX[2];
 
-    int bef_x1 = beforeRect.x;
-    int bef_y1 = beforeRect.y;
-    int bef_x2 = beforeRect.x + beforeRect.width - 1;
-    int bef_y2 = beforeRect.y + beforeRect.height - 1;
-
-    // when pseudo inverse
-    int aft_x1 = (int)(s * (double)bef_x1 + a);
-    int aft_y1 = (int)(s * (double)bef_y1 + b);
-    int aft_x2 = (int)(s * (double)bef_x2 + a);
-    int aft_y2 = (int)(s * (double)bef_y2 + b);
+    int fitbox_l = beforeRect.x + a;
+    int fitbox_t = beforeRect.y + b;
+    int fitbox_r = (int)(fitbox_l + s * beforeRect.width);
+    int fitbox_b = (int)(fitbox_t + s * beforeRect.height);
 
     // keep in boundary
     cv::Size frameSize = this->prevFrame.size();
-    aft_x1 = std::min( std::max(0, aft_x1), frameSize.width - 1 );
-    aft_y1 = std::min( std::max(0, aft_y1), frameSize.height - 1 );
-    aft_x2 = std::min( std::max(0, aft_x2), frameSize.width - 1 );
-    aft_y2 = std::min( std::max(0, aft_y2), frameSize.height - 1 );
+    fitbox_l = std::min( std::max(0, fitbox_l), frameSize.width);
+    fitbox_t = std::min( std::max(0, fitbox_t), frameSize.height);
+    fitbox_r = std::min( std::max(0, fitbox_r), frameSize.width);
+    fitbox_b = std::min( std::max(0, fitbox_b), frameSize.height);
 
-    fitBox.x = aft_x1;
-    fitBox.y = aft_y1;
-    fitBox.width = aft_x2 - aft_x1;
-    fitBox.height = aft_y2 - aft_y1;
+    fitBox.x = fitbox_l;
+    fitBox.y = fitbox_t;
+    fitBox.width = fitbox_r - fitbox_l;
+    fitBox.height = fitbox_b - fitbox_t;
 }
 
 static cv::Scalar colorPreset[] = {
