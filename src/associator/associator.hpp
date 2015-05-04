@@ -2,6 +2,7 @@
 #define UGPROJ_ASSOCIATOR_HEADER
 
 #define UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT 10
+#define UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD 1.25
 
 #include "../structure.hpp"
 #include "../optflow/manager.hpp"
@@ -110,7 +111,7 @@ namespace ugproj {
             void list_fit_boxes(const std::vector<cv::DMatch>& matches,
                                 const cv::Rect& query_box,
                                 std::vector<cv::Rect>* fit_boxes);
-            void computeFitBox(const cv::DMatch& match1,
+            bool computeFitBox(const cv::DMatch& match1,
                                const cv::DMatch& match2,
                                const std::vector<cv::KeyPoint>& keypointsA,
                                const std::vector<cv::KeyPoint>& keypointsB,

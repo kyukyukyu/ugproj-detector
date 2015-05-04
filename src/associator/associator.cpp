@@ -285,17 +285,20 @@ void SiftFaceAssociator::list_fit_boxes(const vector<cv::DMatch>& matches,
         }
 
         cv::Rect fit_box;
-        this->computeFitBox(
+        bool is_valid_fitting = this->computeFitBox(
                 matches[idx_m1], matches[idx_m2],
                 keypointsA, keypointsB,
                 query_box, fit_box);
+        if (!is_valid_fitting) {
+            continue;
+        }
 
         fit_boxes->push_back(fit_box);
         ++i;
     }
 }
 
-void SiftFaceAssociator::computeFitBox(
+bool SiftFaceAssociator::computeFitBox(
         const cv::DMatch& match1,
         const cv::DMatch& match2,
         const std::vector<cv::KeyPoint>& keypointsA,
@@ -344,6 +347,11 @@ void SiftFaceAssociator::computeFitBox(
     a = matX[1];
     b = matX[2];
 
+    if (s >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD ||
+        1/s >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD) {
+        return false;
+    }
+
     int fitbox_l = beforeRect.x + a;
     int fitbox_t = beforeRect.y + b;
     int fitbox_r = (int)(fitbox_l + s * beforeRect.width);
@@ -360,6 +368,8 @@ void SiftFaceAssociator::computeFitBox(
     fitBox.y = fitbox_t;
     fitBox.width = fitbox_r - fitbox_l;
     fitBox.height = fitbox_b - fitbox_t;
+
+    return true;
 }
 
 static cv::Scalar colorPreset[] = {
