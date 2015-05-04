@@ -107,6 +107,9 @@ namespace ugproj {
             void computeBestFitBox(fc_v::size_type queryIdx,
                                    Fit* bestFit);
             void computeMatchMask(const cv::Rect& beforeRect, cv::Mat& matchMask);
+            void list_fit_boxes(const std::vector<cv::DMatch>& matches,
+                                const cv::Rect& query_box,
+                                std::vector<cv::Rect>* fit_boxes);
             void computeFitBox(const cv::DMatch& match1,
                                const cv::DMatch& match2,
                                const std::vector<cv::KeyPoint>& keypointsA,

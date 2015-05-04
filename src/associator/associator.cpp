@@ -192,25 +192,7 @@ void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
     matcher->match(descA, descB, matches, matchMask);
 
     vector<cv::Rect> fitBoxes;
-    int i = 0;
-    while (i < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT) {
-        // random-pick two matches
-        int idx_m1, idx_m2;
-        idx_m1 = rand() % matches.size();
-        idx_m2 = rand() % matches.size();
-        if (idx_m1 == idx_m2 && matches.size() > 1) {
-            // same match picked: try again
-            continue;
-        }
-
-        cv::Rect fitBox;
-        this->computeFitBox(matches[idx_m1], matches[idx_m2],
-                            keypointsA, keypointsB,
-                            queryBox, fitBox);
-        fitBoxes.push_back(fitBox);
-
-        ++i;
-    }
+    this->list_fit_boxes(matches, queryBox, &fitBoxes);
 
     // find the best fit box
     double maxInlierRatio = -1.0f;
@@ -272,6 +254,44 @@ void SiftFaceAssociator::computeMatchMask(const cv::Rect& beforeRect,
         if (beforeRect.contains(kpA.pt)) {
             matchMask.row(i).setTo(1);
         }
+    }
+}
+
+void SiftFaceAssociator::list_fit_boxes(const vector<cv::DMatch>& matches,
+                                        const cv::Rect& query_box,
+                                        vector<cv::Rect>* fit_boxes) {
+    const vector<cv::DMatch>::size_type num_matches = matches.size();
+    if (num_matches <= 2) {
+        const cv::DMatch& match1 = matches[0];
+        const cv::DMatch& match2 =
+                (num_matches == 1) ? matches[0] : matches[1];
+        cv::Rect fit_box;
+        this->computeFitBox(match1, match2,
+                            this->keypointsA, this->keypointsB,
+                            query_box, fit_box);
+        fit_boxes->push_back(fit_box);
+        return;
+    }
+
+    int i = 0;
+    while (i < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT) {
+        // random-pick two matches
+        int idx_m1, idx_m2;
+        idx_m1 = rand() % num_matches;
+        idx_m2 = rand() % num_matches;
+        if (idx_m1 == idx_m2) {
+            // same match picked: try again
+            continue;
+        }
+
+        cv::Rect fit_box;
+        this->computeFitBox(
+                matches[idx_m1], matches[idx_m2],
+                keypointsA, keypointsB,
+                query_box, fit_box);
+
+        fit_boxes->push_back(fit_box);
+        ++i;
     }
 }
 
