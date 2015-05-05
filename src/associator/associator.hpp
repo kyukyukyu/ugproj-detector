@@ -1,8 +1,9 @@
 #ifndef UGPROJ_ASSOCIATOR_HEADER
 #define UGPROJ_ASSOCIATOR_HEADER
 
-#define UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT 10
+#define UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT 30
 #define UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD 1.25
+#define UGPROJ_ASSOCIATOR_SIFT_INLIER_THRESHOLD 25
 
 #include "../structure.hpp"
 #include "../optflow/manager.hpp"
@@ -98,6 +99,12 @@ namespace ugproj {
                     return (double) this->num_inlier / this->num_keyp_former();
                 }
             };
+            struct FitCandidate{
+                cv::Rect box;
+                double s;
+                double a;
+                double b;
+            };
             const cv::Mat& prevFrame;
             const cv::Mat& nextFrame;
             std::vector<cv::KeyPoint> keypointsA;
@@ -110,18 +117,19 @@ namespace ugproj {
             void computeMatchMask(const cv::Rect& beforeRect, cv::Mat& matchMask);
             void list_fit_boxes(const std::vector<cv::DMatch>& matches,
                                 const cv::Rect& query_box,
-                                std::vector<cv::Rect>* fit_boxes);
+                                std::vector<FitCandidate>* fit_boxes);
             bool computeFitBox(const cv::DMatch& match1,
                                const cv::DMatch& match2,
                                const std::vector<cv::KeyPoint>& keypointsA,
                                const std::vector<cv::KeyPoint>& keypointsB,
                                const cv::Rect& beforeRect,
-                               cv::Rect& fitBox) const;
+                               FitCandidate& fitBox) const;
             inline cv::Scalar color_for(const fc_v::size_type cdd_index);
             void draw_best_fit(const fc_v::size_type cdd_index,
                                cv::Mat* match_img);
             void draw_next_candidates(const fc_v::size_type cdd_index,
                 cv::Mat* next_frame);
+            void draw_inlier_edge(cv::Mat* next_frame, cv::Point* center, cv::Point* matched, int radius);
 
         public:
             SiftFaceAssociator(std::vector<Face>& faces,

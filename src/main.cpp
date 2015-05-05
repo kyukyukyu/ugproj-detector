@@ -102,7 +102,7 @@ int main(int argc, const char** argv) {
 
         /*
         // pruning range for test
-        if (pos < 224 || pos>245){ 
+        if (pos < 519 || pos>570){ 
             pos++;
             continue;
         }
@@ -163,7 +163,7 @@ add_all:
                 faces.push_back(Face(faceId, **it));
             }
         } else {
-            printf("Performing association for faces... ");
+            printf("Performing association for faces...\n");
             FaceAssociator* associator;
 
             if (associationMethod == intersect) {
@@ -199,7 +199,7 @@ add_all:
                    << std::setw(3) << std::setfill('0')
                    << std::setprecision(3) << pos << ".jpg";
                 */
-                ss << "print_next_candidates_"
+                ss << "change_inlier_"
                     << std::setw(3) << std::setfill('0')
                     << std::setprecision(3) << pos << ".jpg";
 
