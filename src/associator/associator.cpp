@@ -196,7 +196,6 @@ void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
     this->computeMatchMask(queryBox, matchMask);
     matcher->match(descA, descB, matches, matchMask);
 
-    
     if (matches.size() == 0){
         printf(" there is no matches!\n");
         return;
@@ -205,11 +204,13 @@ void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
     // for debug
     printf(" there are %d matches...\n", matches.size());
 
+    // find list of fit box candidates
     vector<FitCandidate> fitBoxes;
     this->list_fit_boxes(matches, queryBox, &fitBoxes);    
 
     // find the best fit box
     double maxInlierRatio = -1.0f;
+    int maxMatchCount = 0;
     Fit best_fit;
     vector<FitCandidate>::const_iterator it;
 
@@ -217,6 +218,17 @@ void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
         const FitCandidate fitCandidate = *it;
         const cv::Rect fitBox = fitCandidate.box;
 
+        // count the number of keypoints in fitBox
+        int cnt_all = 0;
+        vector<cv::KeyPoint>::const_iterator itKeypB;
+
+        for (itKeypB = keypointsB.cbegin(); itKeypB != keypointsB.cend(); ++itKeypB) {
+            const cv::KeyPoint& keypoint = *itKeypB;
+            if (fitBox.contains(keypoint.pt)) {
+                ++cnt_all;
+            }
+        }
+       
         // count the number of keypoints matched with ones from queryBox
         // and count the inlier keypoints
         int cnt_match = 0;
@@ -258,22 +270,21 @@ void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
                     fitBox.tl(), fitBox.br(),
                     color);
 
-                //this->draw_inlier_edge(&_nextFrame, &center, &matched, distance);
+                this->draw_inlier_edge(&_nextFrame, &center, &matched, distance);
 
+                // check inlier
                 if (distance_square < (distance * distance)){
-                //    printf("inlier in fit Box #%d\n", it - fitBoxes.begin());
-
                     ++cnt_inlier;
                 }
             }
         }
-//        printf(" there are %d matches in fit box #%d.", cnt_match, it - fitBoxes.begin());
-//        printf(" there are %d inlier\n", cnt_inlier);
+        printf(" there are %d matches in fit box #%d.", cnt_match, it - fitBoxes.begin());
+        printf(" there are %d inlier\n", cnt_inlier);
 
-        if (cnt_match>0 && cnt_inlier>0){
+        if (cnt_inlier>0){
             // compute inlier ratio and compare to maxInlierRatio
-            double inlierRatio = (double)cnt_inlier / (double)cnt_match;
-            //double inlierRatio = (double)cnt_inlier;
+            double inlierRatio = (double)cnt_inlier / (double)cnt_all;
+            
             if (inlierRatio > maxInlierRatio) {
                 printf("best fit box change to #%d\n", it - fitBoxes.begin());
                 maxInlierRatio = inlierRatio;
@@ -622,5 +633,6 @@ void SiftFaceAssociator::draw_inlier_edge(cv::Mat* next_frame, cv::Point* center
     circle(*next_frame, *matched, 2, matched_color, 2, 8, 0);
 
     imshow("inlier_edge", *next_frame);
+
     cv::waitKey(1000);
 }
