@@ -271,10 +271,12 @@ int FaceTracker::compute_optflow(
     // Run GFTT on prev_frame for specified ROI.
     cv::goodFeaturesToTrack(prev_gray, prev_points,
                             FaceTracker::kGfttMaxCorners, 0.01, 10, mask);
-    // Refine corner locations.
-    static const cv::Size subpixel_win_size(10, 10);
-    cv::cornerSubPix(prev_gray, prev_points, subpixel_win_size,
-                     cv::Size(-1,-1), term_crit);
+    if (!prev_points.empty()) {
+      // Refine corner locations.
+      static const cv::Size subpixel_win_size(10, 10);
+      cv::cornerSubPix(prev_gray, prev_points, subpixel_win_size,
+                       cv::Size(-1,-1), term_crit);
+    }
   }
 
   // Append destination points of optical flows computed for previous frame.
