@@ -232,7 +232,7 @@ int FaceTracker::compute_optflow(
     const std::vector<SparseOptflow>& prev_optflows,
     std::vector<SparseOptflow>* curr_optflows) {
   // Compute mask for GFTT.
-  cv::Mat mask(prev_frame.size(), CV_8UC1, 0);
+  cv::Mat mask(prev_frame.size(), CV_8UC1, cv::Scalar(0));
   bool run_gftt = false;
   for (FaceCandidateList::const_iterator it_a = prev_candidates.cbegin();
        it_a != prev_candidates.cend();
@@ -249,7 +249,7 @@ int FaceTracker::compute_optflow(
       }
     }
     if (set_mask) {
-      mask(rect) = 1;
+      mask(rect) = cv::Scalar(1);
       run_gftt = true;
     }
   }
