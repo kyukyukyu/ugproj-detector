@@ -85,8 +85,9 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
       // Track current grabbed frame.
       std::printf("Tracking faces for frame #%ld...\n", pos);
       curr_candidates = new FaceCandidateList();
+      curr_optflows = new std::vector<SparseOptflow>();
       ret = this->track_frame(curr_index, prev_frame, curr_frame,
-                              *prev_candidates, *prev_optflows, &detector,
+                              prev_candidates, *prev_optflows, &detector,
                               curr_candidates, curr_optflows);
       if (ret != 0) {
         break;
@@ -109,6 +110,7 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
         delete prev_candidates;
       }
       prev_candidates = curr_candidates;
+      prev_optflows = curr_optflows;
       curr_frame.copyTo(prev_frame);
       ++curr_index;
     }
@@ -138,7 +140,7 @@ int FaceTracker::track_frame(
     const temp_idx_t curr_index,
     const cv::Mat& prev_frame,
     const cv::Mat& curr_frame,
-    const FaceCandidateList& prev_candidates,
+    const FaceCandidateList* prev_candidates,
     const std::vector<SparseOptflow>& prev_optflows,
     FaceDetector* detector,
     FaceCandidateList* curr_candidates,
@@ -147,10 +149,14 @@ int FaceTracker::track_frame(
   this->detect_faces(curr_index, curr_frame, detector, curr_candidates);
   std::printf("done. Found %lu faces.\n", curr_candidates->size());
 
+  if (prev_candidates == NULL) {
+    return 0;
+  }
+
   std::printf("Computing Lucas-Kanade optical flow between previous frame and "
               "current frame... ");
   this->compute_optflow(prev_frame, curr_frame,
-                        prev_candidates, prev_optflows,
+                        *prev_candidates, prev_optflows,
                         curr_optflows);
   std::puts("done.");
 

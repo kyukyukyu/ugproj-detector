@@ -35,7 +35,7 @@ class FaceTracker {
         const temp_idx_t curr_index,
         const cv::Mat& prev_frame,
         const cv::Mat& curr_frame,
-        const FaceCandidateList& prev_candidates,
+        const FaceCandidateList* prev_candidates,
         const std::vector<SparseOptflow>& prev_optflows,
         FaceDetector* detector,
       FaceCandidateList* curr_candidates,
