@@ -118,7 +118,6 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
   }
 
   delete prev_candidates;
-  delete curr_candidates;
 
   return ret;
 }
