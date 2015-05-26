@@ -13,7 +13,7 @@ typedef unsigned long temp_idx_t;
 typedef unsigned int face_id_t;
 typedef opticalflow::MCImageDoubleX OptFlowArray;
 
-enum asc_meth_t {
+enum AssociationMethod {
   ASSOC_INTERSECT = 0,
   ASSOC_OPTFLOW,
   ASSOC_SIFT,
@@ -26,7 +26,7 @@ struct Arguments {
   double target_fps;
   double detection_scale;
   double assoc_threshold;
-  asc_meth_t assoc_method;
+  AssociationMethod assoc_method;
 };
 
 class FaceCandidate {

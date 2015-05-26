@@ -83,7 +83,7 @@ bool parse_args(int argc, const char** argv, ugproj::Arguments* args) {
     }
     po::notify(vm);
 
-    ugproj::asc_meth_t& assoc_method = args->assoc_method;
+    ugproj::AssociationMethod& assoc_method = args->assoc_method;
     if (assoc_method_s == "intersect") {
       assoc_method = ugproj::ASSOC_INTERSECT;
     } else if (assoc_method_s == "optflow") {
