@@ -289,6 +289,11 @@ int FaceTracker::compute_optflow(
     }
   }
 
+  if (prev_points.empty()) {
+    curr_optflows->clear();
+    return 0;
+  }
+
   // Compute Lucas-Kanade sparse optical flow.
   std::vector<cv::Point2f> curr_points;
   std::vector<uchar> status;
