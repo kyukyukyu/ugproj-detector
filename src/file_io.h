@@ -1,5 +1,6 @@
 #ifndef UGPROJ_FILEIO_H_
 #define UGPROJ_FILEIO_H_
+#define UGPROJ_SUPPRESS_CELIU
 
 #include "structure.hpp"
 

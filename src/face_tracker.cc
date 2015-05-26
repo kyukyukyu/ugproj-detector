@@ -1,5 +1,3 @@
-#include "associator/associator.hpp"
-#include "detector/detector.hpp"
 #include "face_tracker.h"
 
 #include <cstdio>
