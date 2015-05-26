@@ -35,25 +35,25 @@ class FaceTracker {
         const temp_idx_t curr_index,
         const cv::Mat& prev_frame,
         const cv::Mat& curr_frame,
-        const FaceAssociator::fc_v& prev_candidates,
+        const FaceCandidateList& prev_candidates,
         const std::vector<SparseOptflow>& prev_optflows,
         FaceDetector* detector,
-      FaceAssociator::fc_v* curr_candidates,
+      FaceCandidateList* curr_candidates,
       std::vector<SparseOptflow>* curr_optflows);
     int write_frame(
         const temp_idx_t curr_index,
         const std::vector<unsigned long>& tracked_positions,
         const cv::Mat& prev_frame,
         const cv::Mat& curr_frame,
-        const FaceAssociator::fc_v& curr_candidates,
+        const FaceCandidateList& curr_candidates,
         const std::vector<SparseOptflow>& curr_optflows);
     int detect_faces(const temp_idx_t curr_index,
                      const cv::Mat& curr_frame,
                      FaceDetector* detector,
-                     FaceAssociator::fc_v* curr_candidates);
+                     FaceCandidateList* curr_candidates);
     int compute_optflow(const cv::Mat& prev_frame,
                         const cv::Mat& curr_frame,
-                        const FaceAssociator::fc_v& prev_candidates,
+                        const FaceCandidateList& prev_candidates,
                         const std::vector<SparseOptflow>& prev_optflows,
                         std::vector<SparseOptflow>* curr_optflows);
     const FileInput* input_;

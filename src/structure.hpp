@@ -9,9 +9,12 @@
 
 namespace ugproj {
 
+class FaceCandidate;
+
 typedef unsigned long temp_idx_t;
 typedef unsigned int face_id_t;
 typedef opticalflow::MCImageDoubleX OptFlowArray;
+typedef std::vector<FaceCandidate*> FaceCandidateList;
 
 enum AssociationMethod {
   ASSOC_INTERSECT = 0,
