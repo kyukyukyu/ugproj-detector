@@ -23,4 +23,17 @@ add_executable(${project_BIN} ${project_SRCS})
 target_link_libraries(${project_BIN} ${project_LIBS})
 set_target_properties(${project_BIN} PROPERTIES OUTPUT_NAME ${project_BIN})
 
+# Register source files for lucas-kanade
+list(APPEND lk_SRCS "structure.cpp")
+list(APPEND lk_SRCS "detector/detector.cpp")
+list(APPEND lk_SRCS "file_io.cc")
+list(APPEND lk_SRCS "face_tracker.cc")
+list(APPEND lk_SRCS "lucas_kanade.cc")
+set(lk_LIBS ${Boost_LIBRARIES} ${OpenCV_LIBS})
+set(lk_BIN lucas-kanade)
+
+add_executable(${lk_BIN} ${lk_SRCS})
+target_link_libraries(${lk_BIN} ${project_LIBS})
+set_target_properties(${lk_BIN} PROPERTIES OUTPUT_NAME ${lk_BIN})
+
 install(TARGETS ${project_BIN} DESTINATION bin)
