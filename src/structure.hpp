@@ -13,6 +13,22 @@ typedef unsigned long temp_idx_t;
 typedef unsigned int face_id_t;
 typedef opticalflow::MCImageDoubleX OptFlowArray;
 
+enum asc_meth_t {
+  ASSOC_INTERSECT = 0,
+  ASSOC_OPTFLOW,
+  ASSOC_SIFT,
+};
+
+struct Arguments {
+  std::string video_filename;
+  std::string cascade_filename;
+  std::string output_dir;
+  double target_fps;
+  double detection_scale;
+  double assoc_threshold;
+  asc_meth_t assoc_method;
+};
+
 class FaceCandidate {
   public:
     const temp_idx_t frameIndex;
