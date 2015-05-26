@@ -91,14 +91,14 @@ namespace ugproj {
         private:
             struct Fit {
                 cv::Rect box;
+                cv::RotatedRect rotatedBox;
                 cv::Rect queryBox;
                 cv::Point q1;
                 cv::Point q2;
                 cv::Point t1;
                 cv::Point t2;
-                double s;
-                double a;
-                double b;
+                cv::Mat matX;
+
                 std::vector<cv::DMatch> matches;
                 int num_inlier;
                 double inlier_ratio;

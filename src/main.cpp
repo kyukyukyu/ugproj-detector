@@ -102,7 +102,7 @@ int main(int argc, const char** argv) {
 
         
         // pruning range for test
-        if (pos < 540 || pos>570){ 
+        if (pos < 519 || pos>570){ 
             pos++;
             continue;
         }
@@ -199,7 +199,7 @@ add_all:
                    << std::setw(3) << std::setfill('0')
                    << std::setprecision(3) << pos << ".jpg";
                 */
-                ss << "change_box_fitting"
+                ss << "rotated_Rect"
                     << std::setw(3) << std::setfill('0')
                     << std::setprecision(3) << pos << ".jpg";
 

@@ -17,6 +17,8 @@
 #include <sstream>
 #include <utility>
 
+#define PI 3.14159265
+
 using namespace ugproj;
 using namespace std;
 using Eigen::MatrixXd;
@@ -219,8 +221,8 @@ void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
         double tempInlierRatio;
         Fit fitCandidate;
 
-        // random-pick two matches
-        int idx_m1, idx_m2;
+        // random-pick three matches
+        int idx_m1, idx_m2, idx_m3;
         idx_m1 = rand() % num_matches;
         idx_m2 = rand() % num_matches;
 
@@ -307,19 +309,20 @@ bool SiftFaceAssociator::computeFitBox(
     idx_ap1 = match1.trainIdx;
     idx_ap2 = match2.trainIdx;
 
-    int x1, y1, x2, y2;
+    int x1, y1, x2, y2, x3, y3;
     fit.q1.x = x1 = keypointsA[idx_bp1].pt.x;
     fit.q1.y = y1 = keypointsA[idx_bp1].pt.y;
     fit.q2.x = x2 = keypointsA[idx_bp2].pt.x;
     fit.q2.y = y2 = keypointsA[idx_bp2].pt.y;
 
-    int sx1, sy1, sx2, sy2;
+    int sx1, sy1, sx2, sy2, sx3, sy3;
     fit.t1.x = sx1 = keypointsB[idx_ap1].pt.x;
     fit.t1.y = sy1 = keypointsB[idx_ap1].pt.y;
     fit.t2.x = sx2 = keypointsB[idx_ap2].pt.x;
     fit.t2.y = sy2 = keypointsB[idx_ap2].pt.y;
 
     // solve linear system
+    /*
     Eigen::MatrixXd matA(4, 3);
     Eigen::Vector4d matB;
     Eigen::VectorXd matX;
@@ -333,13 +336,12 @@ bool SiftFaceAssociator::computeFitBox(
             sy1 - origin.y,
             sy2 - origin.y;
     matX = matA.colPivHouseholderQr().solve(matB);
+    
+    fit.matX = matX;
+    
     s = matX[0];
     a = matX[1];
     b = matX[2];
-
-    fit.s = s;
-    fit.a = a;
-    fit.b = b;
 
     if (s >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD ||
         1/s >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD) {
@@ -367,6 +369,49 @@ bool SiftFaceAssociator::computeFitBox(
     fitBox.height = fitbox_b - fitbox_t;
 
     fit.box = fitBox;
+    */
+
+    // solve rotated system
+    Eigen::MatrixXd matA(3, 2);
+    Eigen::MatrixXd matB(3, 2);
+    //Eigen::MatrixXd matX(3, 3);
+    double s, radian, a, b, c, d;
+  
+
+    // points
+    std::vector<cv::Point2f> p1;
+    p1.push_back(cv::Point2f(x1, y1));
+    p1.push_back(cv::Point2f(x2, y2));
+    p1.push_back(cv::Point2f(0, 0));
+
+    // simple translation from p1 for testing:
+    std::vector<cv::Point2f> p2;
+    p2.push_back(cv::Point2f(sx1, sy1));
+    p2.push_back(cv::Point2f(sx2, sy2));
+    p2.push_back(cv::Point2f(0, 0));
+
+    cv::Mat matX = cv::estimateRigidTransform(p1, p2, false);
+
+    if (matX.rows == 0)
+        return false;
+
+    cout << "print matX. size is " << matX.rows << endl;
+    cout << matX << endl;
+
+    fit.matX = matX;
+        
+    c = matX.at<double>(0, 0);
+    d = matX.at<double>(1, 0);
+    a = matX.at<double>(0, 2);
+    b = matX.at<double>(1, 2);
+
+    s = sqrt(c*c + d*d);
+    radian = atan(c / b) * 180 / PI;
+
+    cv::Point2f center = cv::Point2f(beforeRect.x + beforeRect.width / 2+a, beforeRect.y + beforeRect.height / 2+b);
+    cv::RotatedRect fitBox = cv::RotatedRect(center,cv::Size2f(beforeRect.width*s,beforeRect.height*s),radian);
+
+    fit.rotatedBox = fitBox;
 
     *fitCandidate = fit;
 
@@ -379,8 +424,6 @@ double SiftFaceAssociator::calculateInlierRatio(
     const fc_v::size_type fit_index, 
     const fc_v::size_type cdd_index) {
 
-    const cv::Rect fitBox = fitCandidate.box;
-
     // draw fit candidate
     cv::Mat _nextFrame = this->nextFrame.clone();
 
@@ -388,12 +431,6 @@ double SiftFaceAssociator::calculateInlierRatio(
     int cnt_all = 0;
     vector<cv::KeyPoint>::const_iterator itKeypB;
 
-    for (itKeypB = keypointsB.cbegin(); itKeypB != keypointsB.cend(); ++itKeypB) {
-        const cv::KeyPoint& keypoint = *itKeypB;
-        if (fitBox.contains(keypoint.pt)) {
-            ++cnt_all;
-        }
-    }
 
     // count the number of keypoints matched with ones from queryBox
     // and count the inlier keypoints
@@ -414,15 +451,24 @@ double SiftFaceAssociator::calculateInlierRatio(
 
         //this->draw_fit_candidate(matches, &point, fitCandidate, cdd_index);
         
-        if (fitBox.contains(keypointB.pt)) {
-            this->draw_fit_candidate(matches, &point, fitCandidate, cdd_index);
+            //this->draw_fit_candidate(matches, &point, fitCandidate, cdd_index);
 
             ++cnt_match;
 
+            int origin_x = fitCandidate.queryBox.tl().x;
+            int origin_y = fitCandidate.queryBox.tl().y;
+
             int matched_x = keypointB.pt.x;
             int matched_y = keypointB.pt.y;
-            int aft_x = (int)(fitCandidate.s * (double)keypointA.pt.x + fitCandidate.a);
-            int aft_y = (int)(fitCandidate.s * (double)keypointA.pt.y + fitCandidate.b);
+
+            double c, d, a, b;
+            c = fitCandidate.matX.at<double>(0, 0);
+            d = fitCandidate.matX.at<double>(1, 0);
+            a = fitCandidate.matX.at<double>(0, 2);
+            b = fitCandidate.matX.at<double>(1, 2);
+
+            int aft_x = keypointA.pt.x*c - keypointA.pt.y*d + a;
+            int aft_y = keypointA.pt.x*d + keypointA.pt.y*c + b;
 
             int distance_square = (matched_x - aft_x)*(matched_x - aft_x) + (matched_y - aft_y)*(matched_y - aft_y);
 
@@ -434,31 +480,33 @@ double SiftFaceAssociator::calculateInlierRatio(
             matched.x = matched_x;
             matched.y = matched_y;
 
-            int distance = (double)fitBox.width * ((double)UGPROJ_ASSOCIATOR_SIFT_RADIUS_THRESHOLD / 100);
+            int distance = (double)fitCandidate.rotatedBox.boundingRect().width * ((double)UGPROJ_ASSOCIATOR_SIFT_RADIUS_THRESHOLD / 100);
 
             cv::Mat _nextFrame = this->nextFrame.clone();
 
             // draw candidate box on _prevFrame
             const cv::Scalar color = this->color_for((fit_index) % 6);
-            cv::rectangle(_nextFrame,
-                fitBox.tl(), fitBox.br(),
-                color);
 
-            this->draw_inlier_edge(&_nextFrame, matches, &center, &matched, distance);
+            cv::Point2f vertices[4];
+            fitCandidate.rotatedBox.points(vertices);
+            for (int i = 0; i < 4; i++)
+                line(_nextFrame, vertices[i], vertices[(i + 1) % 4], color);
+
+            //this->draw_inlier_edge(&_nextFrame, matches, &center, &matched, distance);
 
             // check inlier
             if (distance_square < (distance * distance)){
                 ++cnt_inlier;
             }
-        }
+        
     }
      printf("%d matches among %d in fit box #%d.", cnt_match, cnt_all, fit_index);
     
      fitCandidate.num_inlier = cnt_inlier;
     double inlierRatio;
-    if (cnt_all){
+    if (cnt_match){
         // compute inlier ratio and compare to maxInlierRatio
-        inlierRatio = (double)cnt_inlier / (double)cnt_all;
+        inlierRatio = (double)cnt_inlier / (double)cnt_match;
     }
     else
         inlierRatio = 0;
@@ -534,16 +582,27 @@ inline cv::Scalar SiftFaceAssociator::color_for(const fc_v::size_type cdd_index)
 void SiftFaceAssociator::draw_best_fit(const fc_v::size_type cdd_index,
                                        cv::Mat* match_img) {
     // offset to draw best fit on latter frame
-    cv::Point offset_x = cv::Point(this->nextFrame.cols, 0);
-
+    
     const Fit& bestFit = this->bestFits[cdd_index];
 
     // draw best fit box
     const cv::Rect& fitBox = bestFit.box;
     const cv::Scalar color = this->color_for(cdd_index);
+    /*
     cv::rectangle(*match_img,
                   fitBox.tl() + offset_x, fitBox.br() + offset_x,
                   color);
+                  */
+    const cv::RotatedRect rotatedBox = bestFit.rotatedBox;
+    cv::Point2f vertices[4];
+    rotatedBox.points(vertices);
+    cv::Point2f offset_x = cv::Point2f(this->nextFrame.cols, 0);
+
+    int i;
+    for (i = 0; i < 4; i++)
+        line(*match_img, vertices[i] + offset_x, vertices[(i + 1) % 4] + offset_x, color);
+
+    /*
 
     // compute the scale and draw this and inlier information
     // below the best fit box
@@ -597,6 +656,7 @@ void SiftFaceAssociator::draw_best_fit(const fc_v::size_type cdd_index,
                 CV_FONT_HERSHEY_PLAIN,
                 1.0,
                 color);
+                */
 }
 
 void SiftFaceAssociator::draw_next_candidates(const fc_v::size_type cdd_index, cv::Mat* next_frame){
@@ -657,11 +717,20 @@ void SiftFaceAssociator::draw_fit_candidate(const std::vector<cv::DMatch>& match
 
     const cv::Rect fitBox = fitCandidate.box;
     const cv::Rect queryBox = fitCandidate.queryBox;
+    const cv::RotatedRect rotatedBox = fitCandidate.rotatedBox;
 
+    /*
     cv::rectangle(_nextFrame,
         fitBox.tl(), fitBox.br(),
         color);
-    
+    */
+
+
+    cv::Point2f vertices[4];
+    rotatedBox.points(vertices);
+    for (int i = 0; i < 4; i++)
+        line(_nextFrame, vertices[i], vertices[(i + 1) % 4], color);
+
     cv::rectangle(_prevFrame,
         queryBox.tl(), queryBox.br(),
         color);
