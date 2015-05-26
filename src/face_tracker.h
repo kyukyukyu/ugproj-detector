@@ -25,8 +25,8 @@ class FaceTracker {
       int frame_height;
     };
     struct SparseOptflow {
-      cv::Point prev_point;
-      cv::Point next_point;
+      cv::Point2f prev_point;
+      cv::Point2f next_point;
       bool found;
     };
     static const int kGfttMaxCorners = 100;

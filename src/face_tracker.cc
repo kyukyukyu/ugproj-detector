@@ -261,7 +261,7 @@ int FaceTracker::compute_optflow(
   cvtColor(curr_frame, curr_gray, CV_BGR2GRAY);
 
   // Points in the previous frame at which the optical flow will be computed.
-  std::vector<cv::Point> prev_points;
+  std::vector<cv::Point2f> prev_points;
 
   // The termination criteria of the iterative search algorithm.
   using cv::TermCriteria;
@@ -288,7 +288,7 @@ int FaceTracker::compute_optflow(
   }
 
   // Compute Lucas-Kanade sparse optical flow.
-  std::vector<cv::Point> curr_points;
+  std::vector<cv::Point2f> curr_points;
   std::vector<uchar> status;
   std::vector<float> error;
   static const cv::Size win_size(31, 31);
@@ -296,10 +296,11 @@ int FaceTracker::compute_optflow(
                            status, error, win_size, 3, term_crit);
 
   // Save the result.
-  const std::vector<cv::Point>::size_type num_curr_points = curr_points.size();
+  const std::vector<cv::Point2f>::size_type num_curr_points =
+      curr_points.size();
   curr_optflows->clear();
   curr_optflows->reserve(num_curr_points);
-  for (std::vector<cv::Point>::size_type i = 0; i < num_curr_points; ++i) {
+  for (std::vector<cv::Point2f>::size_type i = 0; i < num_curr_points; ++i) {
     SparseOptflow optflow;
     optflow.prev_point = prev_points[i];
     if (status[i] == 1) {
