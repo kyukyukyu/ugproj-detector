@@ -20,7 +20,7 @@ class FaceCandidate {
     const cv::Mat image;
     face_id_t faceId;
 
-    FaceCandidate(temp_idx_t& frameIndex, const cv::Rect& rect,
+    FaceCandidate(const temp_idx_t frameIndex, const cv::Rect& rect,
                   cv::Mat& image) :
         frameIndex(frameIndex), rect(rect), image(image), faceId(0) {};
 };

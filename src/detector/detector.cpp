@@ -7,7 +7,7 @@ using namespace std;
 using namespace cv;
 using namespace ugproj;
 
-void FaceDetector::detectFaces(Mat& frame, vector<Rect>& rects, const float scale) {
+void FaceDetector::detectFaces(const Mat& frame, vector<Rect>& rects, const float scale) {
     const static Scalar lowerBound(0, 133, 77);
     const static Scalar upperBound(255, 173, 127);
     Mat ycrcb;
