@@ -11,7 +11,7 @@ namespace ugproj {
         public:
             FaceDetector(cv::CascadeClassifier& cascade):
                 cascade(cascade) {};
-            void detectFaces(cv::Mat& frame, std::vector<cv::Rect>& rects, const float scale);
+            void detectFaces(const cv::Mat& frame, std::vector<cv::Rect>& rects, const float scale);
     };
 } // ugproj
 
