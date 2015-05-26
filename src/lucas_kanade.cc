@@ -1,3 +1,5 @@
+#define UGPROJ_SUPPRESS_CELIU
+
 #include "face_tracker.h"
 #include "file_io.h"
 #include "structure.hpp"
