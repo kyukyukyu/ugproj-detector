@@ -1,9 +1,10 @@
 #ifndef UGPROJ_ASSOCIATOR_HEADER
 #define UGPROJ_ASSOCIATOR_HEADER
 
-#define UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT 30
+#define UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT 70
 #define UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD 1.25
-#define UGPROJ_ASSOCIATOR_SIFT_INLIER_THRESHOLD 25
+#define UGPROJ_ASSOCIATOR_SIFT_RADIUS_THRESHOLD 30
+#define UGPROJ_ASSOCIATOR_SIFT_INLIER_THRESHOLD 0.1
 
 #include "../structure.hpp"
 #include "../optflow/manager.hpp"
@@ -90,20 +91,23 @@ namespace ugproj {
         private:
             struct Fit {
                 cv::Rect box;
-                std::vector<cv::DMatch> matches;
-                int num_inlier;
-                inline int num_keyp_former() const {
-                    return this->matches.size();
-                }
-                inline double inlier_ratio() const {
-                    return (double) this->num_inlier / this->num_keyp_former();
-                }
-            };
-            struct FitCandidate{
-                cv::Rect box;
+                cv::Rect queryBox;
+                cv::Point q1;
+                cv::Point q2;
+                cv::Point t1;
+                cv::Point t2;
                 double s;
                 double a;
                 double b;
+                std::vector<cv::DMatch> matches;
+                int num_inlier;
+                double inlier_ratio;
+                inline int num_keyp_former() const {
+                    return this->matches.size();
+                }
+                inline double get_inlier_ratio() const {
+                    return inlier_ratio;
+                }
             };
             const cv::Mat& prevFrame;
             const cv::Mat& nextFrame;
@@ -115,21 +119,23 @@ namespace ugproj {
             void computeBestFitBox(fc_v::size_type queryIdx,
                                    Fit* bestFit);
             void computeMatchMask(const cv::Rect& beforeRect, cv::Mat& matchMask);
-            void list_fit_boxes(const std::vector<cv::DMatch>& matches,
-                                const cv::Rect& query_box,
-                                std::vector<FitCandidate>* fit_boxes);
             bool computeFitBox(const cv::DMatch& match1,
                                const cv::DMatch& match2,
                                const std::vector<cv::KeyPoint>& keypointsA,
                                const std::vector<cv::KeyPoint>& keypointsB,
                                const cv::Rect& beforeRect,
-                               FitCandidate& fitBox) const;
+                               Fit* fitCandidate) const;
+            double calculateInlierRatio(Fit& fitCandidate,
+                                        const std::vector<cv::DMatch>& matches,
+                                        const fc_v::size_type fit_index,
+                                        const fc_v::size_type cdd_index);
             inline cv::Scalar color_for(const fc_v::size_type cdd_index);
+            void draw_fit_candidate(const std::vector<cv::DMatch>& matches, cv::Point* center, Fit& fitCandidate, const fc_v::size_type cdd_index);
             void draw_best_fit(const fc_v::size_type cdd_index,
                                cv::Mat* match_img);
             void draw_next_candidates(const fc_v::size_type cdd_index,
                 cv::Mat* next_frame);
-            void draw_inlier_edge(cv::Mat* next_frame, cv::Point* center, cv::Point* matched, int radius);
+            void draw_inlier_edge(cv::Mat* next_frame, const std::vector<cv::DMatch>& matches, cv::Point* center, cv::Point* matched, int radius);
 
         public:
             SiftFaceAssociator(std::vector<Face>& faces,
