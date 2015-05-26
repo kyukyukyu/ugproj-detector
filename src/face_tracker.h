@@ -12,7 +12,7 @@ namespace ugproj {
 class FaceTracker {
   public:
     FaceTracker();
-    int set_input(const FileInput* input);
+    int set_input(FileInput* input);
     int set_writer(const FileWriter* writer);
     int set_args(const Arguments* args);
     int track(std::vector<unsigned long>* tracked_positions);
@@ -56,7 +56,7 @@ class FaceTracker {
                         const FaceCandidateList& prev_candidates,
                         const std::vector<SparseOptflow>& prev_optflows,
                         std::vector<SparseOptflow>* curr_optflows);
-    const FileInput* input_;
+    FileInput* input_;
     const FileWriter* writer_;
     const Arguments* args_;
 };
