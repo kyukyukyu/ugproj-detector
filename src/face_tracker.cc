@@ -50,9 +50,9 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
   // The matrix representing previous grabbed frame.
   cv::Mat prev_frame;
   // The list of face candidates detected in current grabbed frame.
-  FaceAssociator::fc_v* curr_candidates = NULL;
+  FaceCandidateList* curr_candidates = NULL;
   // The list of face candidates detected in previous grabbed frame.
-  FaceAssociator::fc_v* prev_candidates = NULL;
+  FaceCandidateList* prev_candidates = NULL;
   // The list of sparse optical flows computed at current tracking.
   std::vector<SparseOptflow>* curr_optflows = NULL;
   // The list of sparse optical flows computed at previous tracking.
@@ -86,7 +86,7 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
 
       // Track current grabbed frame.
       std::printf("Tracking faces for frame #%ld...\n", pos);
-      curr_candidates = new FaceAssociator::fc_v();
+      curr_candidates = new FaceCandidateList();
       ret = this->track_frame(curr_index, prev_frame, curr_frame,
                               *prev_candidates, *prev_optflows, &detector,
                               curr_candidates, curr_optflows);
@@ -140,10 +140,10 @@ int FaceTracker::track_frame(
     const temp_idx_t curr_index,
     const cv::Mat& prev_frame,
     const cv::Mat& curr_frame,
-    const FaceAssociator::fc_v& prev_candidates,
+    const FaceCandidateList& prev_candidates,
     const std::vector<SparseOptflow>& prev_optflows,
     FaceDetector* detector,
-    FaceAssociator::fc_v* curr_candidates,
+    FaceCandidateList* curr_candidates,
     std::vector<SparseOptflow>* curr_optflows) {
   std::printf("Detecting faces... ");
   this->detect_faces(curr_index, curr_frame, detector, curr_candidates);
@@ -164,7 +164,7 @@ int FaceTracker::write_frame(
     const std::vector<unsigned long>& tracked_positions,
     const cv::Mat& prev_frame,
     const cv::Mat& curr_frame,
-    const FaceAssociator::fc_v& curr_candidates,
+    const FaceCandidateList& curr_candidates,
     const std::vector<SparseOptflow>& curr_optflows) {
   // Return value of this method.
   int ret = 0;
@@ -177,7 +177,7 @@ int FaceTracker::write_frame(
   cv::Mat image = curr_frame.clone();
 
   // Draw face detections.
-  for (FaceAssociator::fc_v::const_iterator it = curr_candidates.cbegin();
+  for (FaceCandidateList::const_iterator it = curr_candidates.cbegin();
        it != curr_candidates.cend();
        ++it) {
     const cv::Rect& face = (*it)->rect;
@@ -207,7 +207,7 @@ int FaceTracker::write_frame(
 int FaceTracker::detect_faces(const temp_idx_t curr_index,
                               const cv::Mat& curr_frame,
                               FaceDetector* detector,
-                              FaceAssociator::fc_v* curr_candidates) {
+                              FaceCandidateList* curr_candidates) {
   std::vector<cv::Rect> rects;
   detector->detectFaces(curr_frame, rects, this->args_->detection_scale);
   for (std::vector<cv::Rect>::const_iterator it = rects.cbegin();
@@ -224,13 +224,13 @@ int FaceTracker::detect_faces(const temp_idx_t curr_index,
 int FaceTracker::compute_optflow(
     const cv::Mat& prev_frame,
     const cv::Mat& curr_frame,
-    const FaceAssociator::fc_v& prev_candidates,
+    const FaceCandidateList& prev_candidates,
     const std::vector<SparseOptflow>& prev_optflows,
     std::vector<SparseOptflow>* curr_optflows) {
   // Compute mask for GFTT.
   cv::Mat mask(prev_frame.size(), CV_8UC1, 0);
   bool run_gftt = false;
-  for (FaceAssociator::fc_v::const_iterator it_a = prev_candidates.cbegin();
+  for (FaceCandidateList::const_iterator it_a = prev_candidates.cbegin();
        it_a != prev_candidates.cend();
        ++it_a) {
     const FaceCandidate* candidate = *it_a;
