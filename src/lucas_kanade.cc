@@ -15,9 +15,8 @@ int main(int argc, const char** argv) {
   int ret = 0;
 
   ugproj::Arguments args;
-  ret = parse_args(argc, argv, &args);
-  if (ret != 0) {
-    return ret;
+  if (!parse_args(argc, argv, &args)) {
+    return 1;
   }
 
   ugproj::FileInput input;
@@ -55,13 +54,13 @@ bool parse_args(int argc, const char** argv, ugproj::Arguments* args) {
     desc.add_options()
       ("help", "produce help message.")
       ("video-file,v",
-       po::value<string>(&args->video_filename)->required(),
+       po::value<std::string>(&args->video_filename)->required(),
        "path to input video file.")
       ("cascade-classifier,c",
-       po::value<string>(&args->cascade_filename)->required(),
+       po::value<std::string>(&args->cascade_filename)->required(),
        "path to cascade classifier file.")
       ("output-dir,o",
-       po::value<string>(&args->output_dir)->default_value("output"),
+       po::value<std::string>(&args->output_dir)->default_value("output"),
        "path to output directory.")
       ("target-fps,f",
        po::value<double>(&args->target_fps)->default_value(10.0),
@@ -73,14 +72,14 @@ bool parse_args(int argc, const char** argv, ugproj::Arguments* args) {
        po::value<double>(&args->assoc_threshold)->default_value(0.5),
        "threshold for probability used during association.")
       ("association-method,m",
-       po::value<string>(&assoc_method_s)->required(),
+       po::value<std::string>(&assoc_method_s)->required(),
        "association method. should be one of 'intersect', and 'optflow'.")
     ;
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
     if (vm.count("help")) {
-      cout << desc << '\n';
+      std::cout << desc << '\n';
       return false;
     }
     po::notify(vm);
