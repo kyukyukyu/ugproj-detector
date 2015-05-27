@@ -100,13 +100,13 @@ int main(int argc, const char** argv) {
         // save frame index - frame number mapping
         frameNumbers.push_back(pos);
 
-        
+        /*
         // pruning range for test
         if (pos < 519 || pos>570){ 
             pos++;
             continue;
         }
-        
+        */
 
         // calculate optical flow if this is not the first frame
         if (associationMethod == optflow && index > 0) {
@@ -199,7 +199,7 @@ add_all:
                    << std::setw(3) << std::setfill('0')
                    << std::setprecision(3) << pos << ".jpg";
                 */
-                ss << "rotated_Rect"
+                ss << "similarity_transformation_"
                     << std::setw(3) << std::setfill('0')
                     << std::setprecision(3) << pos << ".jpg";
 
