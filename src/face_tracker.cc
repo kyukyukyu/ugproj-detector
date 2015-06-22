@@ -1,3 +1,5 @@
+#define UGPROJ_SUPPRESS_CELIU
+#include "associator/associator.hpp"
 #include "face_tracker.h"
 
 #include <cstdio>
@@ -157,6 +159,14 @@ int FaceTracker::track_frame(
   this->compute_optflow(prev_frame, curr_frame,
                         *prev_candidates, prev_optflows,
                         curr_optflows);
+  std::puts("done.");
+
+  std::printf("Associating detected faces between previous frame and current "
+              "frame... ");
+  KltFaceAssociator associator(this->labeled_faces_,
+                               *prev_candidates, *curr_candidates,
+                               *curr_optflows);
+  associator.associate();
   std::puts("done.");
 
   return 0;
