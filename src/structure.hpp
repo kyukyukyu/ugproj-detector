@@ -22,6 +22,16 @@ typedef opticalflow::MCImageDoubleX OptFlowArray;
 
 typedef std::vector<FaceCandidate*> FaceCandidateList;
 
+// Represents single sparse optflow computed between two images.
+struct SparseOptflow {
+  // The position of point in the former image.
+  cv::Point2f prev_point;
+  // The position of point in the latter image.
+  cv::Point2f next_point;
+  // True if this sparse optical flow is valid.
+  bool found;
+};
+
 enum AssociationMethod {
   ASSOC_INTERSECT = 0,
   ASSOC_OPTFLOW,

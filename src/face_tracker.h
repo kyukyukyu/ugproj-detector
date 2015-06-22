@@ -24,11 +24,6 @@ class FaceTracker {
       int frame_width;
       int frame_height;
     };
-    struct SparseOptflow {
-      cv::Point2f prev_point;
-      cv::Point2f next_point;
-      bool found;
-    };
     static const int kGfttMaxCorners = 100;
     void get_properties(cv::VideoCapture* video, VideoProperties* props);
     int track_frame(
