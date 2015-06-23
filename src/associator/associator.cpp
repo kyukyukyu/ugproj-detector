@@ -214,7 +214,7 @@ void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
     // find best fit box
     while (trial_cnt < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT && fit_cnt < 10){
         trial_cnt++;
-        //printf("%d trial..", trial_cnt);
+        printf("%d trial..\n", trial_cnt);
       
         double tempInlierRatio;
         Fit fitCandidate;
@@ -368,38 +368,40 @@ bool SiftFaceAssociator::computeFitBox(
 
         fit.box = fitBox;
     } else if (transformation == SIMILARITY_TRANSFORM){
+         // solve linear system
+        Eigen::MatrixXd matA(4, 4);
+        Eigen::Vector4d matB;
+        Eigen::VectorXd matS;
+        double a,b,c,d;
+        double s, radian;
 
-        // solve rotated system
-        cv::Mat matS;
-        double s, radian, a, b, c, d;
+        matA << x1 - origin.x, -y1+origin.y, 1, 0,
+            y1 - origin.y, x1 - origin.x, 0, 1,
+            x2 - origin.x, -y2 + origin.y, 1, 0,
+            y2 - origin.y, x2 - origin.x, 0, 1;
+        matB << sx1 - origin.x,
+            sy1 - origin.y,
+            sx2 - origin.x,
+            sy2 - origin.y;
+        matS = matA.colPivHouseholderQr().solve(matB);
 
-        std::vector<cv::Point2f> p1;
-        p1.push_back(cv::Point2f(x1, y1));
-        p1.push_back(cv::Point2f(x2, y2));
-        p1.push_back(cv::Point2f(0, 0));
-
-        std::vector<cv::Point2f> p2;
-        p2.push_back(cv::Point2f(sx1, sy1));
-        p2.push_back(cv::Point2f(sx2, sy2));
-        p2.push_back(cv::Point2f(0, 0));
-
-        matS = cv::estimateRigidTransform(p1, p2, false);
-
-        if (matS.rows == 0)
-            return false;
+        fit.matS = matS;
 
         //cout << "print matX. size is " << matS.rows << endl;
         //cout << matS << endl;
 
-        fit.matS = matS;
-
-        c = matS.at<double>(0, 0);
-        d = matS.at<double>(1, 0);
-        a = matS.at<double>(0, 2);
-        b = matS.at<double>(1, 2);
+        c = matS[0]; // scos(theta)
+        d = matS[1]; // ssin(theta)
+        a = matS[2]; // a
+        b = matS[3]; // b
 
         s = sqrt(c*c + d*d);
-        radian = atan(c / b) * 180 / PI;
+        radian = atan(d / c) * 180 / PI;
+
+        if (s >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD ||
+            1 / s >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD) {
+            return false;
+        }
 
         cv::Point2f center = cv::Point2f(beforeRect.x + beforeRect.width / 2 + a, beforeRect.y + beforeRect.height / 2 + b);
         cv::RotatedRect fitRotatedBox = cv::RotatedRect(center, cv::Size2f(beforeRect.width*s, beforeRect.height*s), radian);
@@ -538,10 +540,10 @@ double SiftFaceAssociator::calculateInlierRatio(
             int matched_y = keypointB.pt.y;
 
             double c, d, a, b;
-            c = fitCandidate.matS.at<double>(0, 0);
-            d = fitCandidate.matS.at<double>(1, 0);
-            a = fitCandidate.matS.at<double>(0, 2);
-            b = fitCandidate.matS.at<double>(1, 2);
+            c = fitCandidate.matS[0];
+            d = fitCandidate.matS[1];
+            a = fitCandidate.matS[2];
+            b = fitCandidate.matS[3];
 
             int aft_x = keypointA.pt.x*c - keypointA.pt.y*d + a;
             int aft_y = keypointA.pt.x*d + keypointA.pt.y*c + b;
@@ -556,7 +558,12 @@ double SiftFaceAssociator::calculateInlierRatio(
             matched.x = matched_x;
             matched.y = matched_y;
 
-            int distance_threshold = (double)fitCandidate.rotatedBox.boundingRect().width * ((double)UGPROJ_ASSOCIATOR_SIFT_RADIUS_THRESHOLD / 100);
+            int distance_threshold;
+            // printf("width is %d\n", fitCandidate.rotatedBox.boundingRect().width);
+            if (fitCandidate.rotatedBox.boundingRect().width<80)
+                distance_threshold = (double)fitCandidate.rotatedBox.boundingRect().width * ((double)UGPROJ_ASSOCIATOR_SIFT_RADIUS_SMALL_THRESHOLD / 100);
+            else
+                distance_threshold = (double)fitCandidate.rotatedBox.boundingRect().width * ((double)UGPROJ_ASSOCIATOR_SIFT_RADIUS_BIG_THRESHOLD / 100);
 
             cv::Mat _nextFrame = this->nextFrame.clone();
 
@@ -574,9 +581,7 @@ double SiftFaceAssociator::calculateInlierRatio(
             if (distance_square < (distance_threshold * distance_threshold)){
                 ++cnt_inlier;
             }
-        }
-        printf("%d matches among in query box.", cnt_match);
-       
+        }  
 
         if (cnt_match){
             // compute inlier ratio and compare to maxInlierRatio
@@ -589,7 +594,8 @@ double SiftFaceAssociator::calculateInlierRatio(
     fitCandidate.num_inlier = cnt_inlier;
     fitCandidate.inlier_ratio = inlier_ratio;
 
-    printf(" there are %d inlier. ratio is %lf\n", cnt_inlier, inlier_ratio);
+    if (cnt_inlier>0)
+        printf(" there are %d inlier. ratio is %lf\n", cnt_inlier, inlier_ratio);
 
     return inlier_ratio;
 }
@@ -729,6 +735,12 @@ void SiftFaceAssociator::draw_best_fit(const fc_v::size_type cdd_index,
     else if (transformation == SIMILARITY_TRANSFORM){
         cv::RotatedRect rotatedBox = bestFit.rotatedBox;
         cv::Point2f offset_x2f = cv::Point2f(this->nextFrame.cols, 0);
+        cv::Point offset_x = cv::Point(this->nextFrame.cols, 0);
+
+        circle(*match_img, bestFit.q1, 5, this->color_for(1), 2, 8, 0);
+        circle(*match_img, bestFit.q2, 5, this->color_for(2), 2, 8, 0);
+        circle(*match_img, bestFit.t1 + offset_x, 5, this->color_for(1), 2, 8, 0);
+        circle(*match_img, bestFit.t2 + offset_x, 5, this->color_for(2), 2, 8, 0);
 
         cv::Point2f vertices[4];
         rotatedBox.points(vertices);

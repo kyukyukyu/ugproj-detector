@@ -100,13 +100,13 @@ int main(int argc, const char** argv) {
         // save frame index - frame number mapping
         frameNumbers.push_back(pos);
 
-        /*
+        
         // pruning range for test
-        if (pos < 519 || pos>570){ 
+        if (pos < 228 || pos>240){ 
             pos++;
             continue;
         }
-        */
+        
 
         // calculate optical flow if this is not the first frame
         if (associationMethod == optflow && index > 0) {

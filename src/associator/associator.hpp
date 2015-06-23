@@ -3,8 +3,10 @@
 
 #define UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT 70
 #define UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD 1.25
+#define UGPROJ_ASSOCIATOR_SIFT_RADIUS_SMALL_THRESHOLD 60
+#define UGPROJ_ASSOCIATOR_SIFT_RADIUS_BIG_THRESHOLD 30
 #define UGPROJ_ASSOCIATOR_SIFT_RADIUS_THRESHOLD 30
-#define UGPROJ_ASSOCIATOR_SIFT_INLIER_THRESHOLD 0.1
+#define UGPROJ_ASSOCIATOR_SIFT_INLIER_THRESHOLD 0.03
 
 #define PI  3.14159265
 #define LINEAR_TRANSFORM    1
@@ -102,7 +104,7 @@ namespace ugproj {
                 cv::Point t1;
                 cv::Point t2;
                 Eigen::VectorXd matL; // linear transformation matrix
-                cv::Mat matS; // similarity transformation matrix
+                Eigen::VectorXd matS; // similarity transformation matrix
                 std::vector<cv::DMatch> matches;
                 int num_inlier;
                 double inlier_ratio;
