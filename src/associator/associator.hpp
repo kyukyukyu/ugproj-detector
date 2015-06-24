@@ -10,6 +10,8 @@
 #endif
 
 #include <opencv2/opencv.hpp>
+#include <set>
+#include <utility>
 #include <vector>
 
 namespace ugproj {
@@ -137,6 +139,76 @@ class SiftFaceAssociator : public FaceAssociator {
                double threshold);
     void calculateProb();
     void visualize(cv::Mat& img);
+};
+
+class KltFaceAssociator : public FaceAssociator {
+  public:
+    // Represent single match between two feature points.
+    typedef std::pair<cv::Point2d, cv::Point2d> Match;
+    // Compares two Match objects. When ordered using this class, the object
+    // whose outgoing point has lower x value will come first. If the x values
+    // of two objects are same, the object whose outgoing point has lower y
+    // value will come first. If two objects has the same outgoing point, the
+    // same comparison will be made between the incoming points of them.
+    struct MatchCompare {
+      bool operator()(const Match& lhs, const Match& rhs) const {
+        const cv::Point2d& lhs_prev = lhs.first;
+        const cv::Point2d& rhs_prev = rhs.first;
+        const cv::Point2d& lhs_next = lhs.second;
+        const cv::Point2d& rhs_next = rhs.second;
+        return (lhs_prev.x < rhs_prev.x) || !(lhs_prev.x > rhs_prev.x) ||
+               (lhs_prev.y < rhs_prev.y) ||
+               // Two objects has the same outgoing point
+               (lhs_next.x < rhs_next.x) || !(lhs_next.x > rhs_next.x) ||
+               (lhs_next.y < rhs_next.y);
+      }
+    };
+    typedef std::set<Match, MatchCompare> MatchSet;
+    struct Fit {
+      cv::Rect box;
+      MatchSet matches;
+      unsigned int num_inliers;
+    };
+    KltFaceAssociator(std::vector<Face>& faces,
+                      const FaceCandidateList& prev_candidates,
+                      FaceCandidateList& next_candidates,
+                      const cv::Size& frame_size,
+                      const std::vector<SparseOptflow>& optflows,
+                      double threshold);
+    void calculateProb();
+
+  private:
+    // Enums for selecting which point of a match is checked. Used in
+    // find_matches().
+    enum MatchPointSelection {
+      kOutgoing = 0,
+      kIncoming
+    };
+    // Computes best fits for each face candidate in former (i.e. previous)
+    // frame using RANSAC-based algorithm, and save it into `best_fits_`.
+    void compute_best_fits();
+    // Returns the set of matches whose outgoing/incoming points are inside a
+    // rect. The rect and the selection of point for matches should be given.
+    MatchSet find_matches(const cv::Rect& rect,
+                          const MatchPointSelection point_selection) const;
+    // Returns the list of fit boxes computed based on RANSAC-based algorithm.
+    // The set of matches, and the base box for box-fitting should be given.
+    std::vector<cv::Rect> compute_fit_boxes(const MatchSet& matches,
+                                            const cv::Rect& base_rect) const;
+    // Computes single fit box for given base rect and two matches. For
+    // parameters, a const reference to base rect, two const reference to two
+    // matches, and a pointer to a rect object where the result will be stored
+    // should be given. If the fit box is computed correctly, this will return
+    // true. Otherwise, this will return false.
+    bool compute_fit_box(const cv::Rect& base_rect, const Match& match1,
+                         const Match& match2, cv::Rect* fit_box) const;
+    // The size of frames in the video.
+    const cv::Size& frame_size_;
+    // The list of optical flows required for association.
+    const std::vector<SparseOptflow>& optflows_;
+    // The list of computed best fits. This is populated by calling
+    // compute_best_fits().
+    std::vector<Fit> best_fits_;
 };
 
 } // ugproj

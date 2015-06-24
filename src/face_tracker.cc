@@ -165,7 +165,8 @@ int FaceTracker::track_frame(
               "frame... ");
   KltFaceAssociator associator(this->labeled_faces_,
                                *prev_candidates, *curr_candidates,
-                               *curr_optflows);
+                               prev_frame.size(), *curr_optflows,
+                               this->args_->assoc_threshold);
   associator.associate();
   std::puts("done.");
 

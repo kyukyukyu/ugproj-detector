@@ -548,3 +548,228 @@ void SiftFaceAssociator::draw_next_candidates(const fc_v::size_type cdd_index, c
     1.0,
     color);
 }
+
+KltFaceAssociator::KltFaceAssociator(
+    std::vector<Face>& faces,
+    const FaceCandidateList& prev_candidates,
+    FaceCandidateList& next_candidates,
+    const cv::Size& frame_size,
+    const std::vector<SparseOptflow>& optflows,
+    double threshold) :
+  FaceAssociator(faces, prev_candidates, next_candidates, threshold),
+  frame_size_(frame_size),
+  optflows_(optflows) {}
+
+void KltFaceAssociator::calculateProb() {
+  // Set random seed for random-picking matches later.
+  srand(time(NULL));
+
+  // Best fits will be saved into `this->best_fits_`.
+  this->compute_best_fits();
+
+  // Compute correspondence for each pair of face candidates in two frames.
+  FaceCandidateList::size_type i, j, n_prev_cdds, n_next_cdds;
+  n_prev_cdds = this->prevCandidates.size();
+  n_next_cdds = this->nextCandidates.size();
+  for (i = 0; i < n_prev_cdds; ++i) {
+    KltFaceAssociator::Fit& best_fit = this->best_fits_[i];
+    const cv::Rect& fit_box = best_fit.box;
+    for (j = 0; j < n_next_cdds; ++j) {
+      const cv::Rect& cdd_box = this->nextCandidates[j]->rect;
+      cv::Rect intersection = fit_box & cdd_box;
+      const int intersectArea = intersection.area();
+      this->prob[i][j] =
+        (double) intersectArea /
+        (double) (fit_box.area() +
+              cdd_box.area() -
+              intersectArea);
+    }
+  }
+}
+
+void KltFaceAssociator::compute_best_fits() {
+  FaceCandidateList::const_iterator it;
+  for (it = this->prevCandidates.cbegin();
+       it != this->prevCandidates.cend();
+       ++it) {
+    const FaceCandidate* prev_cdd = *it;
+    const cv::Rect& prev_cdd_box = prev_cdd->rect;
+
+    // Find optical flows whose outgoing point is inside `prev_cdd`.
+    const MatchSet outgoing_matches =
+        this->find_matches(prev_cdd_box, kOutgoing);
+
+    // Compute fit boxes using RANSAC-based algorithm.
+    const std::vector<cv::Rect> fit_boxes =
+        this->compute_fit_boxes(outgoing_matches, prev_cdd_box);
+
+    // Find the best fit box.
+    double max_inlier_ratio = -1.0f;
+    Fit best_fit;
+    vector<cv::Rect>::const_iterator it;
+    for (it = fit_boxes.cbegin(); it != fit_boxes.cend(); ++it) {
+      const cv::Rect fit_box = *it;
+      const MatchSet incoming_matches = this->find_matches(fit_box, kIncoming);
+      std::vector<Match> inlier_matches;
+      std::set_intersection(outgoing_matches.cbegin(),
+                            outgoing_matches.cend(),
+                            incoming_matches.cbegin(),
+                            incoming_matches.cend(),
+                            std::back_inserter(inlier_matches),
+                            MatchCompare());
+
+      // Compute inlier ratio and compare to max_inlier_ratio.
+      const MatchSet::size_type num_inliers = inlier_matches.size();
+      double inlier_ratio =
+          (double) num_inliers / (double) incoming_matches.size();
+      if (inlier_ratio > max_inlier_ratio) {
+        max_inlier_ratio = inlier_ratio;
+        best_fit.box = fit_box;
+        best_fit.matches = outgoing_matches;
+        best_fit.num_inliers = num_inliers;
+      }
+    }
+
+    this->best_fits_.push_back(best_fit);
+  }
+}
+
+KltFaceAssociator::MatchSet KltFaceAssociator::find_matches(
+    const cv::Rect& rect,
+    const MatchPointSelection point_selection) const {
+  MatchSet found_matches;
+  std::vector<SparseOptflow>::const_iterator it;
+  for (it = this->optflows_.cbegin(); it != this->optflows_.cend(); ++it) {
+    const SparseOptflow& optflow = *it;
+    bool is_inside = false;
+    if (point_selection == kOutgoing) {
+      is_inside = rect.contains(optflow.prev_point);
+    } else if (point_selection == kIncoming) {
+      is_inside = rect.contains(optflow.next_point);
+    }
+    if (is_inside) {
+      Match m = std::make_pair<cv::Point2d, cv::Point2d>(optflow.prev_point,
+                                                         optflow.next_point);
+      found_matches.insert(m);
+    }
+  }
+  return found_matches;
+}
+
+std::vector<cv::Rect> KltFaceAssociator::compute_fit_boxes(
+    const MatchSet& matches,
+    const cv::Rect& base_rect) const {
+  // Return value for this method. The list of computed fit boxes.
+  std::vector<cv::Rect> ret;
+  // The number of given matches.
+  const MatchSet::size_type num_matches = matches.size();
+  // Const-iterators for (random-)picking two matches.
+  MatchSet::const_iterator it1, it2;
+  // If the number of matches is too small for sampling, use all of them and
+  // return the single fit box.
+  if (num_matches <= 2) {
+    it1 = matches.cbegin();
+    it2 = matches.cend();
+    std::advance(it2, -1);
+    const Match& match1 = *it1;
+    const Match& match2 = *it2;
+    cv::Rect fit_box;
+    this->compute_fit_box(base_rect, match1, match2, &fit_box);
+    ret.push_back(fit_box);
+  } else {
+    int i = 0;
+    while (i < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT) {
+      // Random-pick two matches.
+      int idx_m1, idx_m2;
+      idx_m1 = std::rand() % num_matches;
+      idx_m2 = std::rand() % num_matches;
+      if (idx_m1 == idx_m2) {
+        // Same match picked: try again.
+        continue;
+      }
+      it1 = it2 = matches.cbegin();
+      std::advance(it1, idx_m1);
+      std::advance(it2, idx_m2);
+      const Match& match1 = *it1;
+      const Match& match2 = *it2;
+      cv::Rect fit_box;
+      if (!this->compute_fit_box(base_rect, match1, match2, &fit_box)) {
+        continue;
+      }
+      ret.push_back(fit_box);
+      ++i;
+    }
+  }
+
+  return ret;
+}
+
+bool KltFaceAssociator::compute_fit_box(const cv::Rect& base_rect,
+                                        const Match& match1,
+                                        const Match& match2,
+                                        cv::Rect* fit_box) const {
+  // The top-left point of base_rect is needed to set this as origin for
+  // computation.
+  cv::Point origin = base_rect.tl();
+
+  // Point p_i_j is the outgoing (i = 1) / incoming (i = 2) point of the j-th
+  // match.
+  cv::Point p_1_1 = match1.first;
+  cv::Point p_1_2 = match2.first;
+  cv::Point p_2_1 = match1.second;
+  cv::Point p_2_2 = match2.second;
+
+  double x1, y1, x2, y2;
+  x1 = p_1_1.x;
+  y1 = p_1_1.y;
+  x2 = p_1_2.x;
+  y2 = p_1_2.y;
+
+  double sx1, sy1, sx2, sy2;
+  sx1 = p_2_1.x;
+  sy1 = p_2_1.y;
+  sx2 = p_2_2.x;
+  sy2 = p_2_2.y;
+
+  // solve linear system
+  Eigen::MatrixXd matA(4, 3);
+  Eigen::Vector4d matB;
+  Eigen::VectorXd matX;
+  double s, a, b;
+  matA << x1 - origin.x, 1, 0,
+          x2 - origin.x, 1, 0,
+          y1 - origin.y, 0, 1,
+          y2 - origin.y, 0, 1;
+  matB << sx1 - origin.x,
+          sx2 - origin.x,
+          sy1 - origin.y,
+          sy2 - origin.y;
+  matX = matA.colPivHouseholderQr().solve(matB);
+  s = matX[0];
+  a = matX[1];
+  b = matX[2];
+
+  if (s >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD ||
+    1/s >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD) {
+    return false;
+  }
+
+  int fitbox_l = base_rect.x + a;
+  int fitbox_t = base_rect.y + b;
+  int fitbox_r = (int)(fitbox_l + s * base_rect.width);
+  int fitbox_b = (int)(fitbox_t + s * base_rect.height);
+
+  // keep in boundary
+  const cv::Size& frame_size = this->frame_size_;
+  fitbox_l = std::min( std::max(0, fitbox_l), frame_size.width);
+  fitbox_t = std::min( std::max(0, fitbox_t), frame_size.height);
+  fitbox_r = std::min( std::max(0, fitbox_r), frame_size.width);
+  fitbox_b = std::min( std::max(0, fitbox_b), frame_size.height);
+
+  fit_box->x = fitbox_l;
+  fit_box->y = fitbox_t;
+  fit_box->width = fitbox_r - fitbox_l;
+  fit_box->height = fitbox_b - fitbox_t;
+
+  return true;
+}
