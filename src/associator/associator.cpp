@@ -1,5 +1,4 @@
 #include "associator.hpp"
-#include "../optflow/manager.hpp"
 
 #include <opencv2/nonfree/features2d.hpp>
 #include <opencv2/features2d/features2d.hpp>
@@ -78,6 +77,7 @@ void IntersectionFaceAssociator::calculateProb() {
   }
 }
 
+#ifndef UGPROJ_SUPPRESS_CELIU
 OpticalFlowFaceAssociator::OpticalFlowFaceAssociator(
     std::vector<Face>& faces,
     fc_v& prevCandidates,
@@ -134,6 +134,7 @@ void OpticalFlowFaceAssociator::calculateProb() {
     }
   }
 }
+#endif
 
 SiftFaceAssociator::SiftFaceAssociator(std::vector<Face>& faces,
                      fc_v& prevCandidates,

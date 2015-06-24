@@ -5,7 +5,9 @@
 #define UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD 1.25
 
 #include "../structure.hpp"
+#ifndef UGPROJ_SUPPRESS_CELIU
 #include "../optflow/manager.hpp"
+#endif
 
 #include <opencv2/opencv.hpp>
 #include <vector>
@@ -68,6 +70,7 @@ class IntersectionFaceAssociator : public FaceAssociator {
     void calculateProb();
 };
 
+#ifndef UGPROJ_SUPPRESS_CELIU
 class OpticalFlowFaceAssociator : public FaceAssociator {
   private:
     OpticalFlowManager& flowManager;
@@ -85,6 +88,7 @@ class OpticalFlowFaceAssociator : public FaceAssociator {
         double threshold);
     void calculateProb();
 };
+#endif
 
 class SiftFaceAssociator : public FaceAssociator {
   private:
