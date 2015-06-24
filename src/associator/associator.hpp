@@ -20,7 +20,7 @@ class FaceAssociator {
 
   protected:
     std::vector<Face>& faces;
-    fc_v& prevCandidates;
+    const fc_v& prevCandidates;
     fc_v& nextCandidates;
     double **prob;
     double threshold;
@@ -30,7 +30,7 @@ class FaceAssociator {
   public:
     FaceAssociator(
         std::vector<Face>& faces,
-        fc_v& prevCandidates,
+        const fc_v& prevCandidates,
         fc_v& nextCandidates,
         double threshold):
       faces(faces),
@@ -62,7 +62,7 @@ class IntersectionFaceAssociator : public FaceAssociator {
   public:
     IntersectionFaceAssociator(
         std::vector<Face>& faces,
-        fc_v& prevCandidates,
+        const fc_v& prevCandidates,
         fc_v& nextCandidates,
         double threshold):
       FaceAssociator(faces, prevCandidates, nextCandidates,
@@ -80,7 +80,7 @@ class OpticalFlowFaceAssociator : public FaceAssociator {
   public:
     OpticalFlowFaceAssociator(
         std::vector<Face>& faces,
-        fc_v& prevCandidates,
+        const fc_v& prevCandidates,
         fc_v& nextCandidates,
         OpticalFlowManager& flowManager,
         const temp_idx_t prevFramePos,
@@ -130,7 +130,7 @@ class SiftFaceAssociator : public FaceAssociator {
 
   public:
     SiftFaceAssociator(std::vector<Face>& faces,
-               fc_v& prevCandidates,
+               const fc_v& prevCandidates,
                fc_v& nextCandidates,
                const cv::Mat& prevFrame,
                const cv::Mat& nextFrame,

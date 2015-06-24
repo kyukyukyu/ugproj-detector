@@ -80,7 +80,7 @@ void IntersectionFaceAssociator::calculateProb() {
 #ifndef UGPROJ_SUPPRESS_CELIU
 OpticalFlowFaceAssociator::OpticalFlowFaceAssociator(
     std::vector<Face>& faces,
-    fc_v& prevCandidates,
+    const fc_v& prevCandidates,
     fc_v& nextCandidates,
     OpticalFlowManager& flowManager,
     const temp_idx_t prevFramePos,
@@ -137,7 +137,7 @@ void OpticalFlowFaceAssociator::calculateProb() {
 #endif
 
 SiftFaceAssociator::SiftFaceAssociator(std::vector<Face>& faces,
-                     fc_v& prevCandidates,
+                     const fc_v& prevCandidates,
                      fc_v& nextCandidates,
                      const cv::Mat& prevFrame,
                      const cv::Mat& nextFrame,
