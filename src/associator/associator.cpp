@@ -560,7 +560,7 @@ double SiftFaceAssociator::calculateInlierRatio(
 
             int distance_threshold;
             // printf("width is %d\n", fitCandidate.rotatedBox.boundingRect().width);
-            if (fitCandidate.rotatedBox.boundingRect().width<80)
+            if (fitCandidate.rotatedBox.boundingRect().width<100)
                 distance_threshold = (double)fitCandidate.rotatedBox.boundingRect().width * ((double)UGPROJ_ASSOCIATOR_SIFT_RADIUS_SMALL_THRESHOLD / 100);
             else
                 distance_threshold = (double)fitCandidate.rotatedBox.boundingRect().width * ((double)UGPROJ_ASSOCIATOR_SIFT_RADIUS_BIG_THRESHOLD / 100);
