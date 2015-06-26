@@ -42,3 +42,10 @@ set_target_properties(${lk_BIN} PROPERTIES
     COMPILE_DEFINITIONS "UGPROJ_SUPPRESS_CELIU")
 
 install(TARGETS ${project_BIN} DESTINATION bin)
+
+# We use C++11.
+foreach(t ${project_BIN} ${lk_BIN})
+    set_target_properties(${t} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED ON)
+endforeach()
