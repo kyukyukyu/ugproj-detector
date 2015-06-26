@@ -50,9 +50,9 @@ struct Arguments {
 
 class FaceCandidate {
   public:
-    const temp_idx_t frameIndex;
-    const cv::Rect rect;
-    const cv::Mat image;
+    temp_idx_t frameIndex;
+    cv::Rect rect;
+    cv::Mat image;
     face_id_t faceId;
 
     FaceCandidate(const temp_idx_t frameIndex, const cv::Rect& rect,
