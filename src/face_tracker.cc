@@ -183,19 +183,32 @@ int FaceTracker::write_frame(
   // Return value of this method.
   int ret = 0;
   // Color constants.
-  static const cv::Scalar color_red = CV_RGB(255, 0, 0);
-  static const cv::Scalar color_green = CV_RGB(0, 255, 0);
+  static const cv::Scalar colors[] = {
+    CV_RGB(255, 0, 0),
+    CV_RGB(255, 255, 0),
+    CV_RGB(0, 255, 0),
+    CV_RGB(0, 255, 255),
+    CV_RGB(0, 0, 255),
+    CV_RGB(255, 0, 255),
+  };
+  static const cv::Scalar& color_green = colors[2];
+  static const cv::Scalar& color_red = colors[0];
   // Position of current frame.
   const unsigned long curr_pos = tracked_positions[curr_index];
   // Image matrix for current frame.
   cv::Mat image = curr_frame.clone();
 
-  // Draw face detections.
+  // Draw face detections and their association results.
   for (FaceCandidateList::const_iterator it = curr_candidates.cbegin();
        it != curr_candidates.cend();
        ++it) {
     const cv::Rect& face = (*it)->rect;
-    cv::rectangle(image, face.tl(), face.br(), color_green);
+    const auto face_id = (*it)->faceId;
+    const cv::Scalar& color =
+        colors[face_id % (sizeof(colors) / sizeof(cv::Scalar))];
+    cv::rectangle(image, face.tl(), face.br(), color);
+    cv::putText(image, std::to_string(face_id), face.tl() + cv::Point(4, 4),
+                cv::FONT_HERSHEY_PLAIN, 1.0, color);
   }
 
   // Draw optical flows.
