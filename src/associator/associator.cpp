@@ -588,7 +588,7 @@ void KltFaceAssociator::associate() {
       FaceCandidate restored(this->next_index_, face_rect, face_img);
       restored.faceId = face_id;
       this->nextCandidates.push_back(restored);
-      this->faces[face_id].addCandidate(restored);
+      this->faces[face_id - 1].addCandidate(restored);
     }
   }
 }
