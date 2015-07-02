@@ -19,7 +19,7 @@ namespace ugproj {
 
 class FaceAssociator {
   public:
-    typedef std::vector<FaceCandidate*> fc_v;
+    typedef std::vector<FaceCandidate> fc_v;
 
   protected:
     std::vector<Face>& faces;

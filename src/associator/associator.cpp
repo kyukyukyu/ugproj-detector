@@ -44,13 +44,13 @@ void FaceAssociator::matchCandidates() {
 
     vector<Face>::size_type faceId;
     if (max > 0) {
-      faceId = prevCandidates[maxRow]->faceId;
+      faceId = prevCandidates[maxRow].faceId;
     } else {
       faceId = faces.size() + 1;
       faces.push_back(Face(faceId));
     }
-    nextCandidates[j]->faceId = faceId;
-    faces[faceId - 1].addCandidate(*nextCandidates[j]);
+    nextCandidates[j].faceId = faceId;
+    faces[faceId - 1].addCandidate(nextCandidates[j]);
   }
 }
 
@@ -66,9 +66,9 @@ void IntersectionFaceAssociator::calculateProb() {
     prevSize = prevCandidates.size(), nextSize = nextCandidates.size();
 
   for (size_type i = 0; i < prevSize; ++i) {
-    const cv::Rect& rectI = prevCandidates[i]->rect;
+    const cv::Rect& rectI = prevCandidates[i].rect;
     for (size_type j = 0; j < nextSize; ++j) {
-      const cv::Rect& rectJ = nextCandidates[j]->rect;
+      const cv::Rect& rectJ = nextCandidates[j].rect;
       cv::Rect intersect = rectI & rectJ;
       int intersectArea = intersect.area();
       int unionArea =
@@ -105,12 +105,12 @@ void OpticalFlowFaceAssociator::calculateProb() {
 
   // calculate probability
   for (size_type i = 0; i < prevSize; ++i) {
-    FaceCandidate* prevC = prevCandidates[i];
+    const FaceCandidate& prevC = prevCandidates[i];
     vector<int> pc(nextSize, 0);
-    const cv::Point tl = prevC->rect.tl();
-    const int rectWidth = prevC->rect.width;
-    const int rectHeight = prevC->rect.height;
-    const int rectArea = prevC->rect.area();
+    const cv::Point tl = prevC.rect.tl();
+    const int rectWidth = prevC.rect.width;
+    const int rectHeight = prevC.rect.height;
+    const int rectArea = prevC.rect.area();
 
     for (int x = 0; x < rectWidth; ++x) {
       for (int y = 0; y < rectHeight; ++y) {
@@ -123,7 +123,7 @@ void OpticalFlowFaceAssociator::calculateProb() {
         const cv::Point2d pInDouble = p;
         const cv::Point2d dest = pInDouble + cv::Point2d(v);
         for (size_type j = 0; j < nextSize; ++j) {
-          if (nextCandidates[j]->rect.contains(dest)) {
+          if (nextCandidates[j].rect.contains(dest)) {
             ++pc[j];
           }
         }
@@ -170,7 +170,7 @@ void SiftFaceAssociator::calculateProb() {
 
     const cv::Rect& bestFitBox = bestFit.box;
     for (fc_v::size_type j = 0; j < nextCddsSize; ++j) {
-      const cv::Rect& afterCddBox = this->nextCandidates[j]->rect;
+      const cv::Rect& afterCddBox = this->nextCandidates[j].rect;
       cv::Rect intersection = bestFitBox & afterCddBox;
       const int intersectArea = intersection.area();
       this->prob[i][j] =
@@ -184,7 +184,7 @@ void SiftFaceAssociator::calculateProb() {
 
 void SiftFaceAssociator::computeBestFitBox(fc_v::size_type queryIdx,
                        Fit* bestFit) {
-  const cv::Rect& queryBox = this->prevCandidates[queryIdx]->rect;
+  const cv::Rect& queryBox = this->prevCandidates[queryIdx].rect;
   cv::Ptr<cv::DescriptorMatcher> matcher =
     cv::DescriptorMatcher::create("BruteForce");
   vector<cv::DMatch> matches;
@@ -396,7 +396,7 @@ void SiftFaceAssociator::visualize(cv::Mat& img) {
     const cv::Scalar color = this->color_for(i);
 
     // draw candidate box on _prevFrame
-    const cv::Rect& cddBox = this->prevCandidates[i]->rect;
+    const cv::Rect& cddBox = this->prevCandidates[i].rect;
     cv::rectangle(_prevFrame,
             cddBox.tl(), cddBox.br(),
             color);
@@ -451,7 +451,7 @@ void SiftFaceAssociator::draw_best_fit(const fc_v::size_type cdd_index,
 
   // compute the scale and draw this and inlier information
   // below the best fit box
-  const cv::Rect& cddBox = this->prevCandidates[cdd_index]->rect;
+  const cv::Rect& cddBox = this->prevCandidates[cdd_index].rect;
   const double scale = (double) fitBox.width / (double) cddBox.width;
 
   // generate text to draw
@@ -508,7 +508,7 @@ void SiftFaceAssociator::draw_next_candidates(const fc_v::size_type cdd_index, c
   const cv::Scalar color = this->color_for(cdd_index);
 
   // draw candidate box on _prevFrame
-  const cv::Rect& cddBox = this->nextCandidates[cdd_index]->rect;
+  const cv::Rect& cddBox = this->nextCandidates[cdd_index].rect;
   cv::rectangle(*next_frame,
     cddBox.tl(), cddBox.br(),
     color);
@@ -584,12 +584,11 @@ void KltFaceAssociator::associate() {
       }
       const cv::Rect& face_rect = best_fit->box;
       const cv::Mat face_img(this->next_frame_, face_rect);
-      const face_id_t face_id = this->prevCandidates[i]->faceId;
-      FaceCandidate* restored =
-          new FaceCandidate(this->next_index_, face_rect, face_img);
-      restored->faceId = face_id;
+      const face_id_t face_id = this->prevCandidates[i].faceId;
+      FaceCandidate restored(this->next_index_, face_rect, face_img);
+      restored.faceId = face_id;
       this->nextCandidates.push_back(restored);
-      this->faces[face_id].addCandidate(*restored);
+      this->faces[face_id].addCandidate(restored);
     }
   }
 }
@@ -614,7 +613,7 @@ void KltFaceAssociator::calculateProb() {
     }
     const cv::Rect& fit_box = best_fit->box;
     for (j = 0; j < n_next_cdds; ++j) {
-      const cv::Rect& cdd_box = this->nextCandidates[j]->rect;
+      const cv::Rect& cdd_box = this->nextCandidates[j].rect;
       cv::Rect intersection = fit_box & cdd_box;
       const int intersectArea = intersection.area();
       this->prob[i][j] =
@@ -629,8 +628,8 @@ void KltFaceAssociator::compute_best_fits() {
   for (it = this->prevCandidates.cbegin();
        it != this->prevCandidates.cend();
        ++it) {
-    const FaceCandidate* prev_cdd = *it;
-    const cv::Rect& prev_cdd_box = prev_cdd->rect;
+    const FaceCandidate& prev_cdd = *it;
+    const cv::Rect& prev_cdd_box = prev_cdd.rect;
 
     // Find optical flows whose outgoing point is inside `prev_cdd`.
     const MatchSet outgoing_matches =

@@ -20,7 +20,7 @@ typedef unsigned int face_id_t;
 typedef opticalflow::MCImageDoubleX OptFlowArray;
 #endif
 
-typedef std::vector<FaceCandidate*> FaceCandidateList;
+typedef std::vector<FaceCandidate> FaceCandidateList;
 
 // Represents single sparse optflow computed between two images.
 struct SparseOptflow {

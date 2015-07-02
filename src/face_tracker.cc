@@ -202,8 +202,8 @@ int FaceTracker::write_frame(
   for (FaceCandidateList::const_iterator it = curr_candidates.cbegin();
        it != curr_candidates.cend();
        ++it) {
-    const cv::Rect& face = (*it)->rect;
-    const auto face_id = (*it)->faceId;
+    const cv::Rect& face = it->rect;
+    const auto face_id = it->faceId;
     const cv::Scalar& color =
         colors[face_id % (sizeof(colors) / sizeof(cv::Scalar))];
     cv::rectangle(image, face.tl(), face.br(), color);
@@ -241,8 +241,7 @@ int FaceTracker::detect_faces(const temp_idx_t curr_index,
        it != rects.cend();
        ++it) {
     cv::Mat candidate_img(curr_frame, *it);
-    FaceCandidate* candidate =
-        new FaceCandidate(curr_index, *it, candidate_img);
+    FaceCandidate candidate(curr_index, *it, candidate_img);
     curr_candidates->push_back(candidate);
   }
   return 0;
@@ -260,8 +259,8 @@ int FaceTracker::compute_optflow(
   for (FaceCandidateList::const_iterator it_a = prev_candidates.cbegin();
        it_a != prev_candidates.cend();
        ++it_a) {
-    const FaceCandidate* candidate = *it_a;
-    const cv::Rect& rect = candidate->rect;
+    const FaceCandidate& candidate = *it_a;
+    const cv::Rect& rect = candidate.rect;
     std::vector<SparseOptflow>::const_iterator it_b;
     bool set_mask = true;
     unsigned int n_optflows = 0;
