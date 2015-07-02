@@ -554,12 +554,45 @@ KltFaceAssociator::KltFaceAssociator(
     std::vector<Face>& faces,
     const FaceCandidateList& prev_candidates,
     FaceCandidateList& next_candidates,
-    const cv::Size& frame_size,
+    const temp_idx_t next_index,
+    const cv::Mat& next_frame,
     const std::vector<SparseOptflow>& optflows,
     double threshold) :
   FaceAssociator(faces, prev_candidates, next_candidates, threshold),
-  frame_size_(frame_size),
+  next_index_(next_index),
+  next_frame_(next_frame),
+  frame_size_(next_frame.size()),
   optflows_(optflows) {}
+
+void KltFaceAssociator::associate() {
+  FaceAssociator::associate();
+  // Add best fits of non-labeled face candidates in previous frame to
+  // nextCandidates.
+  const auto prev_size = this->prevCandidates.size();
+  const auto next_size = this->nextCandidates.size();
+  for (FaceCandidateList::size_type i = 0; i < prev_size; ++i) {
+    unsigned int n_overlapped = 0;
+    for (FaceCandidateList::size_type j = 0; j < next_size; ++j) {
+      if (this->prob[i][j] > 0) {
+        ++n_overlapped;
+      }
+    }
+    if (n_overlapped == 0) {
+      boost::optional<Fit> best_fit = this->best_fits_[i];
+      if (!best_fit) {
+        continue;
+      }
+      const cv::Rect& face_rect = best_fit->box;
+      const cv::Mat face_img(this->next_frame_, face_rect);
+      const face_id_t face_id = this->prevCandidates[i]->faceId;
+      FaceCandidate* restored =
+          new FaceCandidate(this->next_index_, face_rect, face_img);
+      restored->faceId = face_id;
+      this->nextCandidates.push_back(restored);
+      this->faces[face_id].addCandidate(*restored);
+    }
+  }
+}
 
 void KltFaceAssociator::calculateProb() {
   // Set random seed for random-picking matches later.

@@ -57,7 +57,7 @@ class FaceAssociator {
       }
       delete[] prob;
     }
-    void associate();
+    virtual void associate();
     virtual void calculateProb() = 0;
 };
 
@@ -142,6 +142,11 @@ class SiftFaceAssociator : public FaceAssociator {
     void visualize(cv::Mat& img);
 };
 
+// Associates face candidates using KLT algorithm and RANSAC-based box fitting.
+//
+// KEEP IN MIND that calling `associate()` to instances of this class may put
+// new face candidates into `nextCandidates` to approximate 'undetected' faces
+// in image. For more about this issue, check GitHub issue #14.
 class KltFaceAssociator : public FaceAssociator {
   public:
     // Represent single match between two feature points.
@@ -182,9 +187,11 @@ class KltFaceAssociator : public FaceAssociator {
     KltFaceAssociator(std::vector<Face>& faces,
                       const FaceCandidateList& prev_candidates,
                       FaceCandidateList& next_candidates,
-                      const cv::Size& frame_size,
+                      const temp_idx_t next_index,
+                      const cv::Mat& next_frame,
                       const std::vector<SparseOptflow>& optflows,
                       double threshold);
+    void associate();
     void calculateProb();
 
   private:
@@ -218,8 +225,12 @@ class KltFaceAssociator : public FaceAssociator {
     // desired, the optional parameter should be set to true.
     static std::vector< std::pair<unsigned int, unsigned int> >
     list_index_pairs(unsigned int size, bool shuffle=false);
+    // The index of next (latter) frame.
+    const temp_idx_t next_index_;
+    // The next (latter) frame.
+    const cv::Mat& next_frame_;
     // The size of frames in the video.
-    const cv::Size& frame_size_;
+    const cv::Size frame_size_;
     // The list of optical flows required for association.
     const std::vector<SparseOptflow>& optflows_;
     // The list of computed best fits. This is populated by calling
