@@ -68,8 +68,8 @@ class Face {
     typedef face_id_t id_type;
     const id_type id;
     Face(id_type id) : id(id) {};
-    Face(id_type id, FaceCandidate& candidate);
-    void addCandidate(FaceCandidate& candidate);
+    Face(id_type id, const FaceCandidate& candidate);
+    void addCandidate(const FaceCandidate& candidate);
 };
 
 } // ugproj
