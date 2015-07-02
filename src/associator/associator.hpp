@@ -157,11 +157,12 @@ class KltFaceAssociator : public FaceAssociator {
         const cv::Point2d& rhs_prev = rhs.first;
         const cv::Point2d& lhs_next = lhs.second;
         const cv::Point2d& rhs_next = rhs.second;
-        return (lhs_prev.x < rhs_prev.x) || !(lhs_prev.x > rhs_prev.x) ||
-               (lhs_prev.y < rhs_prev.y) ||
-               // Two objects has the same outgoing point
-               (lhs_next.x < rhs_next.x) || !(lhs_next.x > rhs_next.x) ||
-               (lhs_next.y < rhs_next.y);
+        return this->cmp_point(lhs_prev, rhs_prev) ||
+               (!this->cmp_point(rhs_prev, lhs_prev) &&
+                this->cmp_point(lhs_next, rhs_next));
+      }
+      bool cmp_point(const cv::Point2d& lhs, const cv::Point2d& rhs) const {
+        return lhs.x < rhs.x || (!(rhs.x < lhs.x) && lhs.y < rhs.y);
       }
     };
     typedef std::set<Match, MatchCompare> MatchSet;
