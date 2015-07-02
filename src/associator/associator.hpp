@@ -164,10 +164,18 @@ class KltFaceAssociator : public FaceAssociator {
       }
     };
     typedef std::set<Match, MatchCompare> MatchSet;
+    // Result of box-fitting with respect to single face candidate.
     struct Fit {
+      // Fit box.
       cv::Rect box;
+      // Set of outgoing matches from the face candidate.
       MatchSet matches;
+      // The number of inliers inside the fit box.
       unsigned int num_inliers;
+      // Returns if it is valid result.
+      bool valid() const {
+        return this->num_inliers > 0;
+      }
     };
     KltFaceAssociator(std::vector<Face>& faces,
                       const FaceCandidateList& prev_candidates,
