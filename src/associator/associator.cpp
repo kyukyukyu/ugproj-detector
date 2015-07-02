@@ -13,6 +13,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <ctime>
+#include <random>
 #include <sstream>
 #include <utility>
 
@@ -677,19 +678,13 @@ std::vector<cv::Rect> KltFaceAssociator::compute_fit_boxes(
     this->compute_fit_box(base_rect, match1, match2, &fit_box);
     ret.push_back(fit_box);
   } else {
-    int i = 0;
-    while (i < UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT) {
-      // Random-pick two matches.
-      int idx_m1, idx_m2;
-      idx_m1 = std::rand() % num_matches;
-      idx_m2 = std::rand() % num_matches;
-      if (idx_m1 == idx_m2) {
-        // Same match picked: try again.
-        continue;
-      }
+    std::vector< std::pair<unsigned int, unsigned int> > idx_pairs =
+        KltFaceAssociator::list_index_pairs(num_matches, true);
+    ret.reserve(UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT);
+    for (const auto& idx_pair : idx_pairs) {
       it1 = it2 = matches.cbegin();
-      std::advance(it1, idx_m1);
-      std::advance(it2, idx_m2);
+      std::advance(it1, idx_pair.first);
+      std::advance(it2, idx_pair.second);
       const Match& match1 = *it1;
       const Match& match2 = *it2;
       cv::Rect fit_box;
@@ -697,7 +692,9 @@ std::vector<cv::Rect> KltFaceAssociator::compute_fit_boxes(
         continue;
       }
       ret.push_back(fit_box);
-      ++i;
+      if (ret.size() >= UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT) {
+        break;
+      }
     }
   }
 
@@ -772,4 +769,21 @@ bool KltFaceAssociator::compute_fit_box(const cv::Rect& base_rect,
   fit_box->height = fitbox_b - fitbox_t;
 
   return true;
+}
+
+std::vector< std::pair<unsigned int, unsigned int> >
+KltFaceAssociator::list_index_pairs(unsigned int size, bool shuffle) {
+  std::vector< std::pair<unsigned int, unsigned int> > ret;
+  ret.reserve(size * (size - 1) / 2);
+  for (unsigned int i = 0; i < size - 1; ++i) {
+    for (unsigned int j = i + 1; j < size; ++j) {
+      ret.push_back(std::pair<unsigned int, unsigned int>(i, j));
+    }
+  }
+  if (shuffle) {
+    static std::random_device rd;
+    std::mt19937 urng(rd());
+    std::shuffle(ret.begin(), ret.end(), urng);
+  }
+  return ret;
 }

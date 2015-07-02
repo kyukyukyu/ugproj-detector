@@ -210,6 +210,12 @@ class KltFaceAssociator : public FaceAssociator {
     // true. Otherwise, this will return false.
     bool compute_fit_box(const cv::Rect& base_rect, const Match& match1,
                          const Match& match2, cv::Rect* fit_box) const;
+    // Returns the list of index pairs for picking two items in an item set.
+    // The size of item set should be provided. For example, if the size of
+    // item set is 3, {{0, 1}, {0, 2}, {1, 2}} is returned. When shuffle is
+    // desired, the optional parameter should be set to true.
+    static std::vector< std::pair<unsigned int, unsigned int> >
+    list_index_pairs(unsigned int size, bool shuffle=false);
     // The size of frames in the video.
     const cv::Size& frame_size_;
     // The list of optical flows required for association.
