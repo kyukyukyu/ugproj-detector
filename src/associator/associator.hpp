@@ -9,6 +9,7 @@
 #include "../optflow/manager.hpp"
 #endif
 
+#include <boost/optional.hpp>
 #include <opencv2/opencv.hpp>
 #include <set>
 #include <utility>
@@ -222,7 +223,7 @@ class KltFaceAssociator : public FaceAssociator {
     const std::vector<SparseOptflow>& optflows_;
     // The list of computed best fits. This is populated by calling
     // compute_best_fits().
-    std::vector<Fit> best_fits_;
+    std::vector< boost::optional<Fit> > best_fits_;
 };
 
 } // ugproj

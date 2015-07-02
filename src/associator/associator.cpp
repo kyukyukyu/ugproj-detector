@@ -573,17 +573,20 @@ void KltFaceAssociator::calculateProb() {
   n_prev_cdds = this->prevCandidates.size();
   n_next_cdds = this->nextCandidates.size();
   for (i = 0; i < n_prev_cdds; ++i) {
-    KltFaceAssociator::Fit& best_fit = this->best_fits_[i];
-    const cv::Rect& fit_box = best_fit.box;
+    boost::optional<Fit>& best_fit = this->best_fits_[i];
+    if (!best_fit) {
+      // No best fit available. Set all probability to zero.
+      std::fill(prob[i], prob[i] + n_next_cdds, 0.0);
+      continue;
+    }
+    const cv::Rect& fit_box = best_fit->box;
     for (j = 0; j < n_next_cdds; ++j) {
       const cv::Rect& cdd_box = this->nextCandidates[j]->rect;
       cv::Rect intersection = fit_box & cdd_box;
       const int intersectArea = intersection.area();
       this->prob[i][j] =
-        (double) intersectArea /
-        (double) (fit_box.area() +
-              cdd_box.area() -
-              intersectArea);
+          (double) intersectArea /
+          (double) (fit_box.area() + cdd_box.area() - intersectArea);
     }
   }
 }
@@ -606,7 +609,7 @@ void KltFaceAssociator::compute_best_fits() {
 
     // Find the best fit box.
     double max_inlier_ratio = -1.0f;
-    Fit best_fit;
+    boost::optional<Fit> best_fit;
     vector<cv::Rect>::const_iterator it;
     for (it = fit_boxes.cbegin(); it != fit_boxes.cend(); ++it) {
       const cv::Rect fit_box = *it;
@@ -619,15 +622,22 @@ void KltFaceAssociator::compute_best_fits() {
                             std::back_inserter(inlier_matches),
                             MatchCompare());
 
+      // Skip if no inlier exists.
+      if (inlier_matches.empty()) {
+        continue;
+      }
+
       // Compute inlier ratio and compare to max_inlier_ratio.
       const MatchSet::size_type num_inliers = inlier_matches.size();
       double inlier_ratio =
           (double) num_inliers / (double) incoming_matches.size();
       if (inlier_ratio > max_inlier_ratio) {
+        Fit new_best_fit;
         max_inlier_ratio = inlier_ratio;
-        best_fit.box = fit_box;
-        best_fit.matches = outgoing_matches;
-        best_fit.num_inliers = num_inliers;
+        new_best_fit.box = fit_box;
+        new_best_fit.matches = outgoing_matches;
+        new_best_fit.num_inliers = num_inliers;
+        best_fit = new_best_fit;
       }
     }
 
