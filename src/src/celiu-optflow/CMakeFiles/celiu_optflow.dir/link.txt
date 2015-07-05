@@ -1,0 +1,2 @@
+/usr/bin/ar cq ../../../lib/libceliu_optflow.a  CMakeFiles/celiu_optflow.dir/opfl_test.cc.o CMakeFiles/celiu_optflow.dir/optical_flow.cc.o CMakeFiles/celiu_optflow.dir/gaussian_pyramid.cc.o CMakeFiles/celiu_optflow.dir/image_file.cc.o
+/usr/bin/ranlib ../../../lib/libceliu_optflow.a

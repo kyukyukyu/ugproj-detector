@@ -26,6 +26,7 @@ int result_cnt = 0;
 
 void FaceAssociator::matchCandidates() {
   typedef fc_v::size_type size_type;
+  std::puts("shit match\n");
 
   const size_type
     prevSize = prevCandidates.size(), nextSize = nextCandidates.size();
@@ -588,7 +589,8 @@ void KltFaceAssociator::calculateProb() {
 }
 
 void KltFaceAssociator::compute_best_fits() {
-  FaceCandidateList::const_iterator it;
+  
+    FaceCandidateList::const_iterator it;
   for (it = this->prevCandidates.cbegin();
        it != this->prevCandidates.cend();
        ++it) {

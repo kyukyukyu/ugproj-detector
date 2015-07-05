@@ -83,7 +83,11 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
 
       // `tracked_positions->at(curr_index)` becomes `pos`
       tracked_positions->push_back(pos);
-
+      if(pos<300){
+        pos++;
+				continue;
+			}
+  
       // Track current grabbed frame.
       std::printf("Tracking faces for frame #%ld...\n", pos);
       curr_candidates = new FaceCandidateList();
@@ -161,6 +165,7 @@ int FaceTracker::track_frame(
                         curr_optflows);
   std::puts("done.");
 
+  std::puts("shit1");
   std::printf("Associating detected faces between previous frame and current "
               "frame... ");
   KltFaceAssociator associator(this->labeled_faces_,
@@ -264,15 +269,21 @@ int FaceTracker::compute_optflow(
     const cv::Rect& rect = candidate->rect;
     std::vector<SparseOptflow>::const_iterator it_b;
     bool set_mask = true;
+	  int cnt_optflow = 0;
+
     for (it_b = prev_optflows.cbegin(); it_b != prev_optflows.cend(); ++it_b) {
       const SparseOptflow& optflow = *it_b;
       if (rect.contains(optflow.next_point)) {
-        set_mask = false;
-        break;
+        cnt_optflow++;
+		    if(cnt_optflow>=rect.width/10){
+		      set_mask = false;
+          break;
+		    }
       }
     }
     if (set_mask) {
-      mask(rect) = cv::Scalar(1);
+      std::printf("%d candidate's # of optflow is %d\n",it_a-prev_candidates.cbegin(),cnt_optflow);
+			mask(rect) = cv::Scalar(1);
       run_gftt = true;
     }
   }
@@ -336,13 +347,18 @@ int FaceTracker::compute_optflow(
     if (status[i] == 1) {
       // Flow is found.
       optflow.next_point = curr_points[i];
-      optflow.found = true;
+      cv::Point2f diff = optflow.next_point - optflow.prev_point;
+      if(cv::sqrt(diff.x*diff.x + diff.y*diff.y)>50)
+        optflow.found = false;
+      else
+        optflow.found = true;
     } else {
       optflow.found = false;
     }
     curr_optflows->push_back(optflow);
   }
 
+  std::printf("curr optflow # is %d\n",curr_optflows->size());
   return 0;
 }
 

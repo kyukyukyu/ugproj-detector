@@ -1,0 +1,3 @@
+/home/naing/Documents/ugproj-detector/src/src/celiu-optflow/CMakeFiles/celiu_optflow.dir
+/home/naing/Documents/ugproj-detector/src/src/CMakeFiles/lucas-kanade.dir
+/home/naing/Documents/ugproj-detector/src/src/CMakeFiles/UndergraduateProj.dir
