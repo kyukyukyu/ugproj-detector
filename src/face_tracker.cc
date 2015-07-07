@@ -264,11 +264,17 @@ int FaceTracker::compute_optflow(
     const cv::Rect& rect = candidate->rect;
     std::vector<SparseOptflow>::const_iterator it_b;
     bool set_mask = true;
+    unsigned int n_optflows = 0;
+    const unsigned int thres_n_optflows = rect.width / 10;
+
     for (it_b = prev_optflows.cbegin(); it_b != prev_optflows.cend(); ++it_b) {
       const SparseOptflow& optflow = *it_b;
       if (rect.contains(optflow.next_point)) {
-        set_mask = false;
-        break;
+        ++n_optflows;
+        if (n_optflows >= thres_n_optflows) {
+          set_mask = false;
+          break;
+        }
       }
     }
     if (set_mask) {
