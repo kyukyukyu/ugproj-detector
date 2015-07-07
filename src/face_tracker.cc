@@ -336,7 +336,12 @@ int FaceTracker::compute_optflow(
     if (status[i] == 1) {
       // Flow is found.
       optflow.next_point = curr_points[i];
-      optflow.found = true;
+      cv::Point2d diff = optflow.next_point - optflow.prev_point;
+      if (cv::norm(diff) > 50.0) {
+        optflow.found = false;
+      } else {
+        optflow.found = true;
+      }
     } else {
       optflow.found = false;
     }
