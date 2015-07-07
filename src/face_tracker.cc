@@ -121,6 +121,13 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
 
   delete prev_candidates;
 
+  for (const Face& f : this->labeled_faces_) {
+    ret = this->write_tracklet(f, *tracked_positions);
+    if (ret != 0) {
+      break;
+    }
+  }
+
   return ret;
 }
 
@@ -354,6 +361,55 @@ int FaceTracker::compute_optflow(
   }
 
   return 0;
+}
+
+int FaceTracker::write_tracklet(
+    const Face& f,
+    const std::vector<unsigned long>& tracked_positions) {
+  // TODO: Move this constant to class declaration.
+  static const int kSize = 64;
+  static const int kNCols = 16;
+  static const cv::Scalar kColorText = CV_RGB(255, 255, 255);
+  static const cv::Scalar kColorTextbox = CV_RGB(0, 0, 0);
+  static const int kMarginTextbox = 4;
+  // Draw tracklet.
+  const auto iterators = f.candidate_iterators();
+  const int n_candidates = iterators.second - iterators.first;
+  const int n_rows = n_candidates / kNCols + !!(n_candidates % kNCols);
+  cv::Mat tracklet(n_rows * kSize, kNCols * kSize, CV_8UC3);
+  tracklet = CV_RGB(255, 255, 255);
+  int i = 0;
+  for (auto it = iterators.first; it != iterators.second; ++it, ++i) {
+    const FaceCandidate& fc = *it;
+    const cv::Rect roi((i % kNCols) * kSize, (i / kNCols) * kSize, kSize, kSize);
+    cv::Mat tracklet_roi(tracklet, roi);
+    // Draw the image of face candidate.
+    fc.resized_image(kSize).copyTo(tracklet_roi);
+    // Prepare the information of face candidate.
+    char c_str_frame_pos[16];
+    std::sprintf(c_str_frame_pos, "%lu", tracked_positions[fc.frameIndex]);
+    std::string str_frame_pos(c_str_frame_pos);
+    // Compute the position for the information text and box including it.
+    int baseline;
+    cv::Size text_size =
+        cv::getTextSize(str_frame_pos, cv::FONT_HERSHEY_PLAIN, 1.0, 1,
+                        &baseline);
+    const cv::Rect box_rec(kMarginTextbox, kMarginTextbox,
+                           2 * kMarginTextbox + text_size.width,
+                           2 * kMarginTextbox + text_size.height);
+    const cv::Point text_org(2 * kMarginTextbox,
+                             2 * kMarginTextbox + text_size.height);
+    // Draw the information text and box including it.
+    // The box should be drawn first.
+    cv::rectangle(tracklet_roi, box_rec, kColorTextbox, CV_FILLED);
+    cv::putText(tracklet_roi, str_frame_pos, text_org, cv::FONT_HERSHEY_PLAIN,
+                1.0, kColorText);
+  }
+  // Prepare the filename.
+  char filename[256];
+  std::sprintf(filename, "face_%d.png", f.id);
+  // Write to file.
+  return this->writer_->write_image(tracklet, filename);
 }
 
 }  // namespace ugproj

@@ -51,6 +51,12 @@ class FaceTracker {
                         const FaceCandidateList& prev_candidates,
                         const std::vector<SparseOptflow>& prev_optflows,
                         std::vector<SparseOptflow>* curr_optflows);
+    // Draws tracklet for a labeled face and writes to a file. The name of file
+    // will be formatted with format string `face_%3d.png` with interpolation
+    // of face ID. An instance of labeled face and the list of tracked frame
+    // positions should be given.
+    int write_tracklet(const Face& f,
+                       const std::vector<unsigned long>& tracked_positions);
     FileInput* input_;
     const FileWriter* writer_;
     const Arguments* args_;
