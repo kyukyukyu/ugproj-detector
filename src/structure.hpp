@@ -6,6 +6,7 @@
 #endif
 
 #include <string>
+#include <utility>
 #include <vector>
 #include <opencv2/opencv.hpp>
 
@@ -71,6 +72,10 @@ class Face {
     Face(id_type id) : id(id) {};
     Face(id_type id, const FaceCandidate& candidate);
     void addCandidate(const FaceCandidate& candidate);
+    std::pair<FaceCandidateList::const_iterator,
+              FaceCandidateList::const_iterator> candidate_iterators() const {
+      return {this->candidates.cbegin(), this->candidates.cend()};
+    }
 };
 
 } // ugproj
