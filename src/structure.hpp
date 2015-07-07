@@ -59,6 +59,12 @@ class FaceCandidate {
     FaceCandidate(const temp_idx_t frameIndex, const cv::Rect& rect,
                   const cv::Mat& image) :
         frameIndex(frameIndex), rect(rect), image(image), faceId(0) {};
+    FaceCandidate(const FaceCandidate& fc) {
+      this->frameIndex = fc.frameIndex;
+      this->rect = fc.rect;
+      fc.image.copyTo(this->image);
+      this->faceId = fc.faceId;
+    }
     cv::Mat resized_image(int size) const;
 };
 
