@@ -36,6 +36,7 @@ void FaceAssociator::matchCandidates() {
     size_type maxRow;
 
     for (size_type i = 0; i < prevSize; ++i) {
+      printf("prob[%d][%d] = %f\n",i,j,prob[i][j]);
       if (prob[i][j] > max && prob[i][j] > threshold) {
         max = prob[i][j];
         maxRow = i;
@@ -43,13 +44,18 @@ void FaceAssociator::matchCandidates() {
     }
 
     vector<Face>::size_type faceId;
+    int flag; // 0 is candidate, 1 is new fitted box
     if (max > 0) {
       faceId = prevCandidates[maxRow].faceId;
+      flag = prevCandidates[maxRow].fitted;
     } else {
+      std::printf("new face\n");
       faceId = faces.size() + 1;
+      flag = 1;
       faces.push_back(Face(faceId));
     }
     nextCandidates[j].faceId = faceId;
+    nextCandidates[j].fitted = flag;
     faces[faceId - 1].addCandidate(nextCandidates[j]);
   }
 }
@@ -61,7 +67,6 @@ void FaceAssociator::associate() {
 
 void IntersectionFaceAssociator::calculateProb() {
   typedef fc_v::size_type size_type;
-
   const size_type
     prevSize = prevCandidates.size(), nextSize = nextCandidates.size();
 
@@ -628,6 +633,7 @@ void KltFaceAssociator::compute_best_fits() {
   for (it = this->prevCandidates.cbegin();
        it != this->prevCandidates.cend();
        ++it) {
+    std::printf("%d's candidate\n",it-this->prevCandidates.cbegin());
     const FaceCandidate& prev_cdd = *it;
     const cv::Rect& prev_cdd_box = prev_cdd.rect;
 
@@ -638,6 +644,11 @@ void KltFaceAssociator::compute_best_fits() {
     // Compute fit boxes using RANSAC-based algorithm.
     const std::vector<cv::Rect> fit_boxes =
         this->compute_fit_boxes(outgoing_matches, prev_cdd_box);
+
+    if(!fit_boxes.size()){
+        std::printf("fit_boxes is null!!!\n");
+        //it = prevCandidates.erase(it);
+    }
 
     // Find the best fit box.
     double max_inlier_ratio = -1.0f;
@@ -655,7 +666,7 @@ void KltFaceAssociator::compute_best_fits() {
                             MatchCompare());
 
       // Skip if no inlier exists.
-      if (inlier_matches.empty()) {
+      if (inlier_matches.size() < fit_box.width / 10) {
         continue;
       }
 
@@ -671,6 +682,7 @@ void KltFaceAssociator::compute_best_fits() {
         new_best_fit.num_inliers = num_inliers;
         best_fit = new_best_fit;
       }
+
     }
 
     this->best_fits_.push_back(best_fit);
@@ -699,6 +711,22 @@ KltFaceAssociator::MatchSet KltFaceAssociator::find_matches(
   return found_matches;
 }
 
+KltFaceAssociator::MatchSet KltFaceAssociator::find_matches_in_rect(
+    const cv::Rect& rect,
+    const MatchSet& matches) const {
+  MatchSet found_matches;
+  MatchSet::const_iterator it;
+  for (it = matches.cbegin(); it != matches.cend(); ++it) {
+    Match match = *it;
+      bool is_inside = false;
+      is_inside = rect.contains(match.first);
+    if (is_inside) {
+      found_matches.insert(match);
+    }
+  }
+  return found_matches;
+}
+
 std::vector<cv::Rect> KltFaceAssociator::compute_fit_boxes(
     const MatchSet& matches,
     const cv::Rect& base_rect) const {
@@ -710,7 +738,7 @@ std::vector<cv::Rect> KltFaceAssociator::compute_fit_boxes(
   MatchSet::const_iterator it1, it2;
   // If the number of matches is too small for sampling, use all of them and
   // return the single fit box.
-  if (num_matches <= 2) {
+  if (num_matches == 2) {
     it1 = matches.cbegin();
     it2 = matches.cend();
     std::advance(it2, -1);
@@ -719,7 +747,11 @@ std::vector<cv::Rect> KltFaceAssociator::compute_fit_boxes(
     cv::Rect fit_box;
     this->compute_fit_box(base_rect, match1, match2, &fit_box);
     ret.push_back(fit_box);
-  } else {
+  }else if(num_matches<2){
+    // No fit box
+    return ret;
+  }
+  else {
     std::vector< std::pair<unsigned int, unsigned int> > idx_pairs =
         KltFaceAssociator::list_index_pairs(num_matches, true);
     ret.reserve(UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT);
@@ -730,13 +762,31 @@ std::vector<cv::Rect> KltFaceAssociator::compute_fit_boxes(
       const Match& match1 = *it1;
       const Match& match2 = *it2;
       cv::Rect fit_box;
+      cv::Point diff1,diff2;
+      diff1 = match1.second - match1.first;
+      diff2 = match2.second - match2.first;
+      printf("diff1 %d diff2 %d\n",diff1.x*diff1.x+diff1.y*diff1.y,
+              diff2.x*diff2.x+diff2.y*diff2.y);
+      if(diff1.x*diff1.x+diff1.y*diff1.y>300 || diff2.x*diff2.x+diff2.y*diff2.y>300){
+        continue;
+      }
       if (!this->compute_fit_box(base_rect, match1, match2, &fit_box)) {
+        continue;
+      }
+      const MatchSet incoming_matches = this->find_matches_in_rect(fit_box, matches);
+     // const MatchSet outgoing_matches = this->find_matches(fit_box, kOutgoing);
+      std::printf("incoming %d\n",incoming_matches.size());
+      if(incoming_matches.size()<10){
+        continue;
+      }
+      if(fit_box.width<20){
         continue;
       }
       ret.push_back(fit_box);
       if (ret.size() >= UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT) {
         break;
       }
+      
     }
   }
 

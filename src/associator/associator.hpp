@@ -208,6 +208,8 @@ class KltFaceAssociator : public FaceAssociator {
     // rect. The rect and the selection of point for matches should be given.
     MatchSet find_matches(const cv::Rect& rect,
                           const MatchPointSelection point_selection) const;
+    MatchSet find_matches_in_rect(const cv::Rect& rect,
+                          const MatchSet& matches) const;
     // Returns the list of fit boxes computed based on RANSAC-based algorithm.
     // The set of matches, and the base box for box-fitting should be given.
     std::vector<cv::Rect> compute_fit_boxes(const MatchSet& matches,

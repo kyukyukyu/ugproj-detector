@@ -55,6 +55,7 @@ class FaceCandidate {
     cv::Rect rect;
     cv::Mat image;
     face_id_t faceId;
+    int fitted = 0;
 
     FaceCandidate(const temp_idx_t frameIndex, const cv::Rect& rect,
                   const cv::Mat& image) :

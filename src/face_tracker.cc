@@ -68,6 +68,11 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
       break;
     }
 
+    if(pos<230){
+      pos++;
+      continue;
+    }
+
     // If target fps is set to zero, every frame will be tracked.
     const double target_fps = this->args_ ? this->args_->target_fps : 0.0;
     const double mod = target_fps == 0.0 ?
@@ -158,6 +163,7 @@ int FaceTracker::track_frame(
   std::printf("done. Found %lu faces.\n", curr_candidates->size());
 
   if (prev_candidates == NULL) {
+    std::printf("no prev candidates");
     return 0;
   }
 
@@ -166,8 +172,8 @@ int FaceTracker::track_frame(
   this->compute_optflow(prev_frame, curr_frame,
                         *prev_candidates, prev_optflows,
                         curr_optflows);
-  std::puts("done.");
-
+  //std::puts("done.");
+  std::printf("done.\n");
   std::printf("Associating detected faces between previous frame and current "
               "frame... ");
   KltFaceAssociator associator(this->labeled_faces_,
@@ -214,8 +220,17 @@ int FaceTracker::write_frame(
     const cv::Scalar& color =
         colors[face_id % (sizeof(colors) / sizeof(cv::Scalar))];
     cv::rectangle(image, face.tl(), face.br(), color);
-    cv::putText(image, std::to_string(face_id), face.tl() + cv::Point(4, 4),
+    std::printf("face width is %d\n",face.width);
+    std::printf("this candidate's fitted is %d\n",it->fitted);
+    if(it->fitted == 0){ // candidate
+      std::printf("candidate\n");
+      cv::putText(image, std::to_string(face_id), face.tl() + cv::Point(4, 4),
                 cv::FONT_HERSHEY_PLAIN, 1.0, color);
+    }else{
+      std::printf("new fitted\n");
+      cv::putText(image, "new", face.tl() + cv::Point(2, 2),
+                cv::FONT_HERSHEY_PLAIN, 1.0, color);
+    }
   }
 
   // Draw optical flows.
@@ -260,6 +275,7 @@ int FaceTracker::compute_optflow(
     const FaceCandidateList& prev_candidates,
     const std::vector<SparseOptflow>& prev_optflows,
     std::vector<SparseOptflow>* curr_optflows) {
+  std::printf("compute_optflow\n");
   // Compute mask for GFTT.
   cv::Mat mask(prev_frame.size(), CV_8UC1, cv::Scalar(0));
   bool run_gftt = false;
@@ -303,6 +319,7 @@ int FaceTracker::compute_optflow(
   static const TermCriteria term_crit(TermCriteria::COUNT + TermCriteria::EPS,
                                       20, 0.03);
   if (run_gftt) {
+  std::printf("run gftt\n");
     // Run GFTT on prev_frame for specified ROI.
     cv::goodFeaturesToTrack(prev_gray, prev_points,
                             FaceTracker::kGfttMaxCorners, 0.01, 10, mask);
@@ -329,6 +346,7 @@ int FaceTracker::compute_optflow(
     return 0;
   }
 
+  std::printf("Lucas Kanade\n");
   // Compute Lucas-Kanade sparse optical flow.
   std::vector<cv::Point2f> curr_points;
   std::vector<uchar> status;
