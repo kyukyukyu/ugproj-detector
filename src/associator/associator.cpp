@@ -44,18 +44,14 @@ void FaceAssociator::matchCandidates() {
     }
 
     vector<Face>::size_type faceId;
-    int flag; // 0 is candidate, 1 is new fitted box
     if (max > 0) {
       faceId = prevCandidates[maxRow].faceId;
-      flag = prevCandidates[maxRow].fitted;
     } else {
       std::printf("new face\n");
       faceId = faces.size() + 1;
-      flag = 1;
       faces.push_back(Face(faceId));
     }
     nextCandidates[j].faceId = faceId;
-    nextCandidates[j].fitted = flag;
     faces[faceId - 1].addCandidate(nextCandidates[j]);
   }
 }
@@ -582,16 +578,20 @@ void KltFaceAssociator::associate() {
         ++n_overlapped;
       }
     }
+    std::printf("prev size %d's overlapped %d\n",i,n_overlapped);
     if (n_overlapped == 0) {
       boost::optional<Fit> best_fit = this->best_fits_[i];
       if (!best_fit) {
         continue;
       }
       const cv::Rect& face_rect = best_fit->box;
+      std::printf("new fit (%d,%d/%d,%d)\n",face_rect.x,face_rect.y,face_rect.width,face_rect.height); 
       const cv::Mat face_img(this->next_frame_, face_rect);
       const face_id_t face_id = this->prevCandidates[i].faceId;
       FaceCandidate restored(this->next_index_, face_rect, face_img);
       restored.faceId = face_id;
+      restored.fitted = 1;
+      printf("fitted is %d\n",restored.fitted);
       this->nextCandidates.push_back(restored);
       this->faces[face_id - 1].addCandidate(restored);
     }
@@ -613,12 +613,21 @@ void KltFaceAssociator::calculateProb() {
     boost::optional<Fit>& best_fit = this->best_fits_[i];
     if (!best_fit) {
       // No best fit available. Set all probability to zero.
+      std::printf("%d's prev candidate's best fit is null!\n",i);
       std::fill(prob[i], prob[i] + n_next_cdds, 0.0);
       continue;
     }
+
     const cv::Rect& fit_box = best_fit->box;
+    std::printf("%d's prev candidate's best fit (%d,%d/%d,%d)\n",i,fit_box.x,fit_box.y,fit_box.width,fit_box.height); 
+    
+
+    if(n_next_cdds == 0){
+      std::printf("next cdd is null!\n"); 
+    }
     for (j = 0; j < n_next_cdds; ++j) {
       const cv::Rect& cdd_box = this->nextCandidates[j].rect;
+      std::printf("next cdd (%d,%d/%d,%d)\n",cdd_box.x,cdd_box.y,cdd_box.width,cdd_box.height); 
       cv::Rect intersection = fit_box & cdd_box;
       const int intersectArea = intersection.area();
       this->prob[i][j] =
@@ -633,10 +642,10 @@ void KltFaceAssociator::compute_best_fits() {
   for (it = this->prevCandidates.cbegin();
        it != this->prevCandidates.cend();
        ++it) {
-    std::printf("%d's candidate\n",it-this->prevCandidates.cbegin());
+    std::printf("\nprev %d's candidate\n",it-this->prevCandidates.cbegin());
     const FaceCandidate& prev_cdd = *it;
     const cv::Rect& prev_cdd_box = prev_cdd.rect;
-
+    std::printf("prev rect (%d,%d/%d,%d) fitted %d\n",prev_cdd_box.x,prev_cdd_box.y,prev_cdd_box.width,prev_cdd_box.height,prev_cdd.fitted);
     // Find optical flows whose outgoing point is inside `prev_cdd`.
     const MatchSet outgoing_matches =
         this->find_matches(prev_cdd_box, kOutgoing);
@@ -666,7 +675,7 @@ void KltFaceAssociator::compute_best_fits() {
                             MatchCompare());
 
       // Skip if no inlier exists.
-      if (inlier_matches.size() < fit_box.width / 10) {
+      if (inlier_matches.size() < prev_cdd_box.width / 10) {
         continue;
       }
 
@@ -765,8 +774,8 @@ std::vector<cv::Rect> KltFaceAssociator::compute_fit_boxes(
       cv::Point diff1,diff2;
       diff1 = match1.second - match1.first;
       diff2 = match2.second - match2.first;
-      printf("diff1 %d diff2 %d\n",diff1.x*diff1.x+diff1.y*diff1.y,
-              diff2.x*diff2.x+diff2.y*diff2.y);
+      //printf("diff1 %d diff2 %d\n",diff1.x*diff1.x+diff1.y*diff1.y,
+      //        diff2.x*diff2.x+diff2.y*diff2.y);
       if(diff1.x*diff1.x+diff1.y*diff1.y>300 || diff2.x*diff2.x+diff2.y*diff2.y>300){
         continue;
       }
@@ -775,7 +784,7 @@ std::vector<cv::Rect> KltFaceAssociator::compute_fit_boxes(
       }
       const MatchSet incoming_matches = this->find_matches_in_rect(fit_box, matches);
      // const MatchSet outgoing_matches = this->find_matches(fit_box, kOutgoing);
-      std::printf("incoming %d\n",incoming_matches.size());
+      //std::printf("incoming %d\n",incoming_matches.size());
       if(incoming_matches.size()<10){
         continue;
       }

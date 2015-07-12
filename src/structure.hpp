@@ -65,6 +65,7 @@ class FaceCandidate {
       this->rect = fc.rect;
       fc.image.copyTo(this->image);
       this->faceId = fc.faceId;
+      this->fitted = fc.fitted;
     }
     cv::Mat resized_image(int size) const;
 };

@@ -217,12 +217,12 @@ int FaceTracker::write_frame(
        ++it) {
     const cv::Rect& face = it->rect;
     const auto face_id = it->faceId;
+    const auto fitted = it->fitted;
     const cv::Scalar& color =
         colors[face_id % (sizeof(colors) / sizeof(cv::Scalar))];
     cv::rectangle(image, face.tl(), face.br(), color);
-    std::printf("face width is %d\n",face.width);
-    std::printf("this candidate's fitted is %d\n",it->fitted);
-    if(it->fitted == 0){ // candidate
+    std::printf("%d's candidate's fitted is %d\n",it-curr_candidates.cbegin(),fitted);
+    if(fitted == 0){ // candidate
       std::printf("candidate\n");
       cv::putText(image, std::to_string(face_id), face.tl() + cv::Point(4, 4),
                 cv::FONT_HERSHEY_PLAIN, 1.0, color);
