@@ -23,8 +23,6 @@ using Eigen::MatrixXd;
 using namespace Eigen;
 using namespace boost;
 
-int result_cnt = 0;
-
 void FaceAssociator::matchCandidates() {
   typedef fc_v::size_type size_type;
 
@@ -667,6 +665,7 @@ void KltFaceAssociator::compute_best_fits() {
       const cv::Rect fit_box = *it;
       const MatchSet incoming_matches = this->find_matches(fit_box, kIncoming);
       std::vector<Match> inlier_matches;
+      std::printf("calc inlier..");
       std::set_intersection(outgoing_matches.cbegin(),
                             outgoing_matches.cend(),
                             incoming_matches.cbegin(),
@@ -674,8 +673,10 @@ void KltFaceAssociator::compute_best_fits() {
                             std::back_inserter(inlier_matches),
                             MatchCompare());
 
+      int inlier_thres = prev_cdd_box.width / 10 * 0.9;
+      std::printf("%d/%d\n",inlier_matches.size(),inlier_thres);
       // Skip if no inlier exists.
-      if (inlier_matches.size() < prev_cdd_box.width / 10) {
+      if (inlier_matches.size() < inlier_thres) {
         continue;
       }
 
@@ -711,12 +712,17 @@ KltFaceAssociator::MatchSet KltFaceAssociator::find_matches(
     } else if (point_selection == kIncoming) {
       is_inside = rect.contains(optflow.next_point);
     }
-    if (is_inside) {
+      cv::Point2d diff;
+      diff = optflow.next_point - optflow.prev_point;
+      int optflow_distance_thres = rect.width / 10 + 17;
+    if (is_inside && cv::norm(diff) < optflow_distance_thres) {
+      //std::printf("optflow distance %f/%d\n",cv::norm(diff),optflow_distance_thres);
       Match m = std::make_pair<cv::Point2d, cv::Point2d>(optflow.prev_point,
                                                          optflow.next_point);
       found_matches.insert(m);
     }
   }
+  printf("found_matches size is %d\n",found_matches.size());
   return found_matches;
 }
 
@@ -758,6 +764,7 @@ std::vector<cv::Rect> KltFaceAssociator::compute_fit_boxes(
     ret.push_back(fit_box);
   }else if(num_matches<2){
     // No fit box
+    std::printf("num matches is less then 2\n");
     return ret;
   }
   else {
@@ -771,24 +778,32 @@ std::vector<cv::Rect> KltFaceAssociator::compute_fit_boxes(
       const Match& match1 = *it1;
       const Match& match2 = *it2;
       cv::Rect fit_box;
-      cv::Point diff1,diff2;
+      /*
+      cv::Point2d diff1,diff2;
       diff1 = match1.second - match1.first;
       diff2 = match2.second - match2.first;
-      //printf("diff1 %d diff2 %d\n",diff1.x*diff1.x+diff1.y*diff1.y,
-      //        diff2.x*diff2.x+diff2.y*diff2.y);
-      if(diff1.x*diff1.x+diff1.y*diff1.y>300 || diff2.x*diff2.x+diff2.y*diff2.y>300){
+      printf("diff1 %f diff2 %f\n",cv::norm(diff1),
+              cv::norm(diff2));
+      int match_distance_thres = base_rect.width * 2.0;
+      std::printf("match distance thres %d ",match_distance_thres);
+      if(norm(diff1)>match_distance_thres || norm(diff2)>match_distance_thres){
+       std::printf("two match is too far\n");
         continue;
       }
+      */
       if (!this->compute_fit_box(base_rect, match1, match2, &fit_box)) {
+        std::printf("compute_fit_box failed\n");
         continue;
       }
       const MatchSet incoming_matches = this->find_matches_in_rect(fit_box, matches);
      // const MatchSet outgoing_matches = this->find_matches(fit_box, kOutgoing);
       //std::printf("incoming %d\n",incoming_matches.size());
-      if(incoming_matches.size()<10){
+      if(incoming_matches.size() < fit_box.width / 10 -1){
+        std::printf("incoming to fit box is too small %d<%d \n",incoming_matches.size(),fit_box.width/10);
         continue;
       }
-      if(fit_box.width<20){
+      if(fit_box.width<35){
+        std::printf("fit box is too small %d\n",fit_box.width);
         continue;
       }
       ret.push_back(fit_box);
@@ -830,32 +845,35 @@ bool KltFaceAssociator::compute_fit_box(const cv::Rect& base_rect,
   sy2 = p_2_2.y;
 
   // solve linear system
-  Eigen::MatrixXd matA(4, 3);
+  Eigen::MatrixXd matA(4, 4);
   Eigen::Vector4d matB;
   Eigen::VectorXd matX;
-  double s, a, b;
-  matA << x1 - origin.x, 1, 0,
-          x2 - origin.x, 1, 0,
-          y1 - origin.y, 0, 1,
-          y2 - origin.y, 0, 1;
+  double sx, sy, a, b;
+  matA << x1 - origin.x, 0, 1, 0,
+          x2 - origin.x, 0, 1, 0,
+          0, y1 - origin.y, 0, 1,
+          0, y2 - origin.y, 0, 1;
   matB << sx1 - origin.x,
           sx2 - origin.x,
           sy1 - origin.y,
           sy2 - origin.y;
   matX = matA.colPivHouseholderQr().solve(matB);
-  s = matX[0];
-  a = matX[1];
-  b = matX[2];
+  sx = matX[0];
+  sy = matX[1];
+  a = matX[2];
+  b = matX[3];
 
-  if (s >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD ||
-    1/s >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD) {
+  if (sx >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD ||
+    1/sx >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD ||
+    sy >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD ||
+    1/sy >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD) {
     return false;
   }
 
   int fitbox_l = base_rect.x + a;
   int fitbox_t = base_rect.y + b;
-  int fitbox_r = (int)(fitbox_l + s * base_rect.width);
-  int fitbox_b = (int)(fitbox_t + s * base_rect.height);
+  int fitbox_r = (int)(fitbox_l + sx * base_rect.width);
+  int fitbox_b = (int)(fitbox_t + sy * base_rect.height);
 
   // keep in boundary
   const cv::Size& frame_size = this->frame_size_;
