@@ -67,12 +67,12 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
       ret = 1;
       break;
     }
-/*
-    if(pos<230){
+
+    if( pos>1500){
       pos++;
       continue;
     }
-*/
+
     // If target fps is set to zero, every frame will be tracked.
     const double target_fps = this->args_ ? this->args_->target_fps : 0.0;
     const double mod = target_fps == 0.0 ?

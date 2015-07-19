@@ -572,7 +572,7 @@ void KltFaceAssociator::associate() {
   for (FaceCandidateList::size_type i = 0; i < prev_size; ++i) {
     unsigned int n_overlapped = 0;
     for (FaceCandidateList::size_type j = 0; j < next_size; ++j) {
-      if (this->prob[i][j] > 0) {
+      if (this->prob[i][j] > threshold) {
         ++n_overlapped;
       }
     }
@@ -714,7 +714,7 @@ KltFaceAssociator::MatchSet KltFaceAssociator::find_matches(
     }
       cv::Point2d diff;
       diff = optflow.next_point - optflow.prev_point;
-      int optflow_distance_thres = rect.width / 10 + 17;
+      int optflow_distance_thres = rect.width / 10 + 20;
     if (is_inside && cv::norm(diff) < optflow_distance_thres) {
       //std::printf("optflow distance %f/%d\n",cv::norm(diff),optflow_distance_thres);
       Match m = std::make_pair<cv::Point2d, cv::Point2d>(optflow.prev_point,
@@ -778,19 +778,6 @@ std::vector<cv::Rect> KltFaceAssociator::compute_fit_boxes(
       const Match& match1 = *it1;
       const Match& match2 = *it2;
       cv::Rect fit_box;
-      /*
-      cv::Point2d diff1,diff2;
-      diff1 = match1.second - match1.first;
-      diff2 = match2.second - match2.first;
-      printf("diff1 %f diff2 %f\n",cv::norm(diff1),
-              cv::norm(diff2));
-      int match_distance_thres = base_rect.width * 2.0;
-      std::printf("match distance thres %d ",match_distance_thres);
-      if(norm(diff1)>match_distance_thres || norm(diff2)>match_distance_thres){
-       std::printf("two match is too far\n");
-        continue;
-      }
-      */
       if (!this->compute_fit_box(base_rect, match1, match2, &fit_box)) {
         std::printf("compute_fit_box failed\n");
         continue;
