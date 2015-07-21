@@ -175,6 +175,12 @@ class KltFaceAssociator : public FaceAssociator {
     struct Fit {
       // Fit box.
       cv::Rect box;
+      double sx;
+      double sy;
+      int a;
+      int b;
+
+      cv::Point origin;
       // Set of outgoing matches from the face candidate.
       MatchSet matches;
       // The number of inliers inside the fit box.
@@ -210,9 +216,10 @@ class KltFaceAssociator : public FaceAssociator {
                           const MatchPointSelection point_selection) const;
     MatchSet find_matches_in_rect(const cv::Rect& rect,
                           const MatchSet& matches) const;
+    int compute_inlier(const MatchSet& matches, const Fit& fit_box) const;    
     // Returns the list of fit boxes computed based on RANSAC-based algorithm.
     // The set of matches, and the base box for box-fitting should be given.
-    std::vector<cv::Rect> compute_fit_boxes(const MatchSet& matches,
+    std::vector<Fit> compute_fit_boxes(const MatchSet& matches,
                                             const cv::Rect& base_rect) const;
     // Computes single fit box for given base rect and two matches. For
     // parameters, a const reference to base rect, two const reference to two
@@ -220,7 +227,7 @@ class KltFaceAssociator : public FaceAssociator {
     // should be given. If the fit box is computed correctly, this will return
     // true. Otherwise, this will return false.
     bool compute_fit_box(const cv::Rect& base_rect, const Match& match1,
-                         const Match& match2, cv::Rect* fit_box) const;
+                         const Match& match2, Fit* fit_box) const;
     // Returns the list of index pairs for picking two items in an item set.
     // The size of item set should be provided. For example, if the size of
     // item set is 3, {{0, 1}, {0, 2}, {1, 2}} is returned. When shuffle is
@@ -237,7 +244,7 @@ class KltFaceAssociator : public FaceAssociator {
     const std::vector<SparseOptflow>& optflows_;
     // The list of computed best fits. This is populated by calling
     // compute_best_fits().
-    std::vector< boost::optional<Fit> > best_fits_;
+    std::vector<Fit> best_fits_;
 };
 
 } // ugproj

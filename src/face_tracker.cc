@@ -68,7 +68,7 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
       break;
     }
 
-    if( pos>1500){
+    if(pos<230 || pos>1500){
       pos++;
       continue;
     }
