@@ -25,6 +25,7 @@ class FaceTracker {
       int frame_height;
     };
     static const int kGfttMaxCorners = 100;
+    static constexpr char kVideoKey[] = "result";
     void get_properties(cv::VideoCapture* video, VideoProperties* props);
     int track_frame(
         const temp_idx_t curr_index,

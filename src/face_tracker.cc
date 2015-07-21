@@ -249,6 +249,7 @@ int FaceTracker::write_result(
   char filename[1024];
   std::sprintf(filename, "%ld.png", curr_pos);
   ret = this->writer_->write_image(image, filename);
+  ret |= this->writer_->write_video_frame(image, this->kVideoKey);
 
   return ret;
 }
