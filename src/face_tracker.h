@@ -13,7 +13,7 @@ class FaceTracker {
   public:
     FaceTracker();
     int set_input(FileInput* input);
-    int set_writer(const FileWriter* writer);
+    int set_writer(FileWriter* writer);
     int set_args(const Arguments* args);
     int track(std::vector<unsigned long>* tracked_positions);
 
@@ -58,7 +58,7 @@ class FaceTracker {
     int write_tracklet(const Face& f,
                        const std::vector<unsigned long>& tracked_positions);
     FileInput* input_;
-    const FileWriter* writer_;
+    FileWriter* writer_;
     const Arguments* args_;
     // List of labeled faces.
     std::vector<Face> labeled_faces_;

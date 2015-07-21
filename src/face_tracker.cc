@@ -17,7 +17,7 @@ int FaceTracker::set_input(FileInput* input) {
   return 0;
 }
 
-int FaceTracker::set_writer(const FileWriter* writer) {
+int FaceTracker::set_writer(FileWriter* writer) {
   this->writer_ = writer;
   return 0;
 }
