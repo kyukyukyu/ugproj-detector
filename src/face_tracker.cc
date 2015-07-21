@@ -28,7 +28,7 @@ int FaceTracker::set_args(const Arguments* args) {
 }
 
 int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
-  if (!this->input_) {
+  if (!this->args_ || !this->input_ || !this->writer_) {
     return 1;
   }
 
