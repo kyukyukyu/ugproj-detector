@@ -6,6 +6,9 @@
 
 namespace ugproj {
 
+const char* FaceTracker::kVideoKey = "result";
+const char* FaceTracker::kVideoFilename = "result.mp4";
+
 FaceTracker::FaceTracker() {
   this->input_ = NULL;
   this->writer_ = NULL;
