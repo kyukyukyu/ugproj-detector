@@ -53,7 +53,7 @@ int FileWriter::open_video_file(
   fs::path filepath = this->output_path_ / filename;
   this->video_files_[key] = cv::VideoWriter(
       filepath.native(),
-      CV_FOURCC('A', 'V', 'C', '1'),
+      CV_FOURCC('X', 'V', 'I', 'D'),
       fps,
       frame_size);
   return !this->video_files_[key].isOpened();
