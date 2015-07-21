@@ -28,6 +28,9 @@ int FaceTracker::set_args(const Arguments* args) {
 }
 
 int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
+  // Return value of this method.
+  int ret = 0;
+
   if (!this->args_ || !this->input_ || !this->writer_) {
     return 1;
   }
@@ -37,6 +40,15 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
   VideoProperties video_props;
   this->get_properties(&video, &video_props);
   FaceDetector detector(cascade);
+
+  ret = this->writer_->open_video_file(
+      this->kVideoKey,
+      this->kVideoFilename,
+      this->args_->target_fps,
+      cv::Size(video_props.frame_width, video_props.frame_height));
+  if (ret) {
+    return ret;
+  }
 
   // The position of current grabbed frame.
   unsigned long pos = 0;
@@ -57,9 +69,6 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
   std::vector<SparseOptflow>* curr_optflows = NULL;
   // The list of sparse optical flows computed at previous tracking.
   std::vector<SparseOptflow>* prev_optflows = NULL;
-
-  // Return value of this method.
-  int ret = 0;
 
   while (pos < video_props.frame_count) {
     if (!video.grab()) {
