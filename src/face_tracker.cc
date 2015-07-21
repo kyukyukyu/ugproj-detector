@@ -102,9 +102,9 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
       std::puts("done.");
 
       // Write tracking result of current grabbed frame to file(s).
-      ret = this->write_frame(curr_index, *tracked_positions,
-                              prev_frame, curr_frame,
-                              *curr_candidates, *curr_optflows);
+      ret = this->write_result(curr_index, *tracked_positions,
+                               prev_frame, curr_frame,
+                               *curr_candidates, *curr_optflows);
       if (ret != 0) {
         break;
       }
@@ -186,7 +186,7 @@ int FaceTracker::track_frame(
   return 0;
 }
 
-int FaceTracker::write_frame(
+int FaceTracker::write_result(
     const temp_idx_t curr_index,
     const std::vector<unsigned long>& tracked_positions,
     const cv::Mat& prev_frame,

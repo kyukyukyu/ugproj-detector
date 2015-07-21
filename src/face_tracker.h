@@ -35,7 +35,7 @@ class FaceTracker {
         FaceDetector* detector,
       FaceCandidateList* curr_candidates,
       std::vector<SparseOptflow>* curr_optflows);
-    int write_frame(
+    int write_result(
         const temp_idx_t curr_index,
         const std::vector<unsigned long>& tracked_positions,
         const cv::Mat& prev_frame,
