@@ -569,6 +569,7 @@ void KltFaceAssociator::associate() {
   // nextCandidates.
   const auto prev_size = this->prevCandidates.size();
   const auto next_size = this->nextCandidates.size();
+  std::printf("in associate, prev size %d next size %d\n",prev_size,next_size);
   for (FaceCandidateList::size_type i = 0; i < prev_size; ++i) {
     unsigned int n_overlapped = 0;
     for (FaceCandidateList::size_type j = 0; j < next_size; ++j) {
@@ -579,8 +580,9 @@ void KltFaceAssociator::associate() {
     std::printf("prev size %d's overlapped %d\n",i,n_overlapped);
     if (n_overlapped == 0) {
       Fit best_fit = this->best_fits_[i];
+      std::printf("prev %d's inlier num is %d\n",i,best_fit.num_inliers);
       if (!best_fit.valid()) {
-        return;
+        continue;
       }
       const cv::Rect& face_rect = best_fit.box;
       std::printf("new fit (%d,%d/%d,%d)\n",face_rect.x,face_rect.y,face_rect.width,face_rect.height); 
@@ -672,7 +674,8 @@ void KltFaceAssociator::compute_best_fits() {
       }
 
     }
-
+    best_fit.num_inliers = max_inlier;
+    std::printf("best fit's num inlier is %d\n",best_fit.num_inliers);
     this->best_fits_.push_back(best_fit);
   }
 }
@@ -756,7 +759,7 @@ std::vector<KltFaceAssociator::Fit> KltFaceAssociator::compute_fit_boxes(
   
   int num_inlier;
  
-  std::printf("ret size is %d",ret.size());
+  std::printf("ret size is %d\n",ret.size());
   
   // If the number of matches is too small for sampling, use all of them and
   // return the single fit box.
@@ -768,7 +771,7 @@ std::vector<KltFaceAssociator::Fit> KltFaceAssociator::compute_fit_boxes(
     const Match& match2 = *it2;
     Fit fit_box;
     this->compute_fit_box(base_rect, match1, match2, &fit_box);
-    if(fit_box.box.width<35){
+    if(fit_box.box.width<35 || fit_box.box.height<35){
       std::printf("fit box is too small %d\n",fit_box.box.width);
       return ret;
     }
@@ -797,7 +800,7 @@ std::vector<KltFaceAssociator::Fit> KltFaceAssociator::compute_fit_boxes(
         std::printf("compute_fit_box failed\n");
         continue;
       }
-      if(fit_box.box.width<35){
+      if(fit_box.box.width<35 || fit_box.box.height<35){
         std::printf("fit box is too small %d\n",fit_box.box.width);
         continue;
       }

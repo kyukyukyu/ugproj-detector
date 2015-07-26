@@ -137,8 +137,10 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
   }
 
   delete prev_candidates;
-
+  
+  int cnt = 0;
   for (const Face& f : this->labeled_faces_) {
+    std::printf("%d's Face tracklet\n",++cnt);
     ret = this->write_tracklet(f, *tracked_positions);
     if (ret != 0) {
       break;
@@ -412,16 +414,19 @@ int FaceTracker::write_tracklet(
   cv::Mat tracklet(n_rows * kSize, kNCols * kSize, CV_8UC3);
   tracklet = CV_RGB(255, 255, 255);
   int i = 0;
+  std::printf("# of candidates is %d\n",n_candidates);
   for (auto it = iterators.first; it != iterators.second; ++it, ++i) {
     const FaceCandidate& fc = *it;
     const cv::Rect roi((i % kNCols) * kSize, (i / kNCols) * kSize, kSize, kSize);
     cv::Mat tracklet_roi(tracklet, roi);
     // Draw the image of face candidate.
     fc.resized_image(kSize).copyTo(tracklet_roi);
+    std::printf("resize ok\n");
     // Prepare the information of face candidate.
     char c_str_frame_pos[16];
     std::sprintf(c_str_frame_pos, "%lu", tracked_positions[fc.frameIndex]);
     std::string str_frame_pos(c_str_frame_pos);
+    std::printf("tracked_positions is %lu\n",tracked_positions[fc.frameIndex]);
     // Compute the position for the information text and box including it.
     int baseline;
     cv::Size text_size =
