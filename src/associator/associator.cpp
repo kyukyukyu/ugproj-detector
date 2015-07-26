@@ -905,8 +905,13 @@ bool KltFaceAssociator::compute_fit_box(const cv::Rect& base_rect,
   fit_box->box.width = fitbox_r - fitbox_l;
   fit_box->box.height = fitbox_b - fitbox_t;
 
-  if(fit_box->box.width<0 || fit_box->box.height<0)
+  if(fit_box->box.width<0 ||
+     fit_box->box.height<0 ||
+     (double)fit_box->box.width/(double)fit_box->box.height > 1.5 ||
+     (double)fit_box->box.height/(double)fit_box->box.width > 1.5){
+      std::printf("width %f height %f\n",fit_box->box.width,fit_box->box.height);
       return false;
+  }
 
   return true;
 }
