@@ -34,7 +34,7 @@ void FaceAssociator::matchCandidates() {
     size_type maxRow;
 
     for (size_type i = 0; i < prevSize; ++i) {
-      printf("prob[%d][%d] = %f\n",i,j,prob[i][j]);
+      //printf("prob[%d][%d] = %f\n",i,j,prob[i][j]);
       if (prob[i][j] > max && prob[i][j] > threshold) {
         max = prob[i][j];
         maxRow = i;
@@ -45,7 +45,7 @@ void FaceAssociator::matchCandidates() {
     if (max > 0) {
       faceId = prevCandidates[maxRow].faceId;
     } else {
-      std::printf("new face\n");
+      //std::printf("new face\n");
       faceId = faces.size() + 1;
       faces.push_back(Face(faceId));
     }
@@ -569,7 +569,7 @@ void KltFaceAssociator::associate() {
   // nextCandidates.
   const auto prev_size = this->prevCandidates.size();
   const auto next_size = this->nextCandidates.size();
-  std::printf("in associate, prev size %d next size %d\n",prev_size,next_size);
+  //std::printf("in associate, prev size %d next size %d\n",prev_size,next_size);
   for (FaceCandidateList::size_type i = 0; i < prev_size; ++i) {
     unsigned int n_overlapped = 0;
     for (FaceCandidateList::size_type j = 0; j < next_size; ++j) {
@@ -577,21 +577,21 @@ void KltFaceAssociator::associate() {
         ++n_overlapped;
       }
     }
-    std::printf("prev size %d's overlapped %d\n",i,n_overlapped);
+    //std::printf("prev size %d's overlapped %d\n",i,n_overlapped);
     if (n_overlapped == 0) {
       Fit best_fit = this->best_fits_[i];
-      std::printf("prev %d's inlier num is %d\n",i,best_fit.num_inliers);
+      //std::printf("prev %d's inlier num is %d\n",i,best_fit.num_inliers);
       if (!best_fit.valid()) {
         continue;
       }
       const cv::Rect& face_rect = best_fit.box;
-      std::printf("new fit (%d,%d/%d,%d)\n",face_rect.x,face_rect.y,face_rect.width,face_rect.height); 
+      //std::printf("new fit (%d,%d/%d,%d)\n",face_rect.x,face_rect.y,face_rect.width,face_rect.height); 
       const cv::Mat face_img(this->next_frame_, face_rect);
       const face_id_t face_id = this->prevCandidates[i].faceId;
       FaceCandidate restored(this->next_index_, face_rect, face_img);
       restored.faceId = face_id;
       restored.fitted = 1;
-      printf("fitted is %d\n",restored.fitted);
+      //std::printf("fitted is %d\n",restored.fitted);
       this->nextCandidates.push_back(restored);
       this->faces[face_id - 1].addCandidate(restored);
     }
@@ -613,21 +613,21 @@ void KltFaceAssociator::calculateProb() {
     Fit& best_fit = this->best_fits_[i];
     if (!best_fit.valid()) {
       // No best fit available. Set all probability to zero.
-      std::printf("%d's prev candidate's best fit is null!\n",i);
+      //std::printf("%d's prev candidate's best fit is null!\n",i);
       std::fill(prob[i], prob[i] + n_next_cdds, 0.0);
       continue;
     }
 
     const cv::Rect& fit_box = best_fit.box;
-    std::printf("%d's prev candidate's best fit (%d,%d/%d,%d)\n",i,fit_box.x,fit_box.y,fit_box.width,fit_box.height); 
+    //std::printf("%d's prev candidate's best fit (%d,%d/%d,%d)\n",i,fit_box.x,fit_box.y,fit_box.width,fit_box.height); 
     
 
     if(n_next_cdds == 0){
-      std::printf("next cdd is null!\n"); 
+      //std::printf("next cdd is null!\n"); 
     }
     for (j = 0; j < n_next_cdds; ++j) {
       const cv::Rect& cdd_box = this->nextCandidates[j].rect;
-      std::printf("next cdd (%d,%d/%d,%d)\n",cdd_box.x,cdd_box.y,cdd_box.width,cdd_box.height); 
+      //std::printf("next cdd (%d,%d/%d,%d)\n",cdd_box.x,cdd_box.y,cdd_box.width,cdd_box.height); 
       cv::Rect intersection = fit_box & cdd_box;
       const int intersectArea = intersection.area();
       this->prob[i][j] =
@@ -642,10 +642,10 @@ void KltFaceAssociator::compute_best_fits() {
   for (it = this->prevCandidates.cbegin();
        it != this->prevCandidates.cend();
        ++it) {
-    std::printf("\nprev %d's candidate\n",it-this->prevCandidates.cbegin());
+    //std::printf("\nprev %d's candidate\n",it-this->prevCandidates.cbegin());
     const FaceCandidate& prev_cdd = *it;
     const cv::Rect& prev_cdd_box = prev_cdd.rect;
-    std::printf("prev rect (%d,%d/%d,%d) fitted %d\n",prev_cdd_box.x,prev_cdd_box.y,prev_cdd_box.width,prev_cdd_box.height,prev_cdd.fitted);
+    //std::printf("prev rect (%d,%d/%d,%d) fitted %d\n",prev_cdd_box.x,prev_cdd_box.y,prev_cdd_box.width,prev_cdd_box.height,prev_cdd.fitted);
     // Find optical flows whose outgoing point is inside `prev_cdd`.
     const MatchSet outgoing_matches =
         this->find_matches(prev_cdd_box, kOutgoing);
@@ -655,8 +655,7 @@ void KltFaceAssociator::compute_best_fits() {
         this->compute_fit_boxes(outgoing_matches, prev_cdd_box);
 
     if(!fit_boxes.size()){
-        std::printf("fit_boxes is null!!!\n");
-        //it = prevCandidates.erase(it);
+        //std::printf("fit_boxes is null!!!\n");
     }
 
     // Find the best fit box.
@@ -668,14 +667,14 @@ void KltFaceAssociator::compute_best_fits() {
 
       unsigned int num_inliers = fit_box.num_inliers;
       if (num_inliers > max_inlier) {
-          std::printf("best fit is changed\n");
+          //std::printf("best fit is changed\n");
         max_inlier = num_inliers;
         best_fit = fit_box;
       }
 
     }
     best_fit.num_inliers = max_inlier;
-    std::printf("best fit's num inlier is %d\n",best_fit.num_inliers);
+    //std::printf("best fit's num inlier is %d\n",best_fit.num_inliers);
     this->best_fits_.push_back(best_fit);
   }
 }
@@ -705,7 +704,7 @@ KltFaceAssociator::MatchSet KltFaceAssociator::find_matches(
       found_matches.insert(m);
     }
   }
-  printf("found_matches size is %d\n",found_matches.size());
+  //printf("found_matches size is %d\n",found_matches.size());
   return found_matches;
 }
 
@@ -764,7 +763,7 @@ std::vector<KltFaceAssociator::Fit> KltFaceAssociator::compute_fit_boxes(
   
   int num_inlier;
  
-  std::printf("ret size is %d\n",ret.size());
+  //std::printf("ret size is %d\n",ret.size());
   
 
   const cv::Size& frame_size = this->frame_size_;
@@ -781,17 +780,17 @@ std::vector<KltFaceAssociator::Fit> KltFaceAssociator::compute_fit_boxes(
     Fit fit_box;
     this->compute_fit_box(base_rect, match1, match2, &fit_box);
     if(fit_box.box.width<fit_box_size_thres || fit_box.box.height<fit_box_size_thres){
-      std::printf("fit box is too small %d\n",fit_box.box.width);
+      //std::printf("fit box is too small %d\n",fit_box.box.width);
       return ret;
     }
-    std::printf("chk inlier number\n");
+    //std::printf("chk inlier number\n");
     fit_box.num_inliers = this->compute_inlier(matches, fit_box);
     int inlier_thres = base_rect.width / 10 * 0.9;
     if(fit_box.num_inliers>=inlier_thres)
       ret.push_back(fit_box);
   }else if(num_matches<2){
     // No fit box
-    std::printf("num matches is less then 2\n");
+    //std::printf("num matches is less then 2\n");
     return ret;
   }
   else {
@@ -806,11 +805,11 @@ std::vector<KltFaceAssociator::Fit> KltFaceAssociator::compute_fit_boxes(
       const Match& match2 = *it2;
       Fit fit_box;
       if (!this->compute_fit_box(base_rect, match1, match2, &fit_box)) {
-        std::printf("compute_fit_box failed\n");
+        //std::printf("compute_fit_box failed\n");
         continue;
       }
     if(fit_box.box.width<fit_box_size_thres || fit_box.box.height<fit_box_size_thres){
-        std::printf("fit box is too small %d\n",fit_box.box.width);
+        //std::printf("fit box is too small %d\n",fit_box.box.width);
         continue;
       }
       // inlier chk
@@ -909,7 +908,6 @@ bool KltFaceAssociator::compute_fit_box(const cv::Rect& base_rect,
      fit_box->box.height<0 ||
      (double)fit_box->box.width/(double)fit_box->box.height > 1.5 ||
      (double)fit_box->box.height/(double)fit_box->box.width > 1.5){
-      std::printf("width %f height %f\n",fit_box->box.width,fit_box->box.height);
       return false;
   }
 

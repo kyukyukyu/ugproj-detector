@@ -84,7 +84,6 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
       pos++;
       continue;
     }
-
     // If target fps is set to zero, every frame will be tracked.
     const double target_fps = this->args_ ? this->args_->target_fps : 0.0;
     const double mod = target_fps == 0.0 ?
@@ -138,9 +137,9 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
 
   delete prev_candidates;
   
-  int cnt = 0;
+ // int cnt = 0;
   for (const Face& f : this->labeled_faces_) {
-    std::printf("%d's Face tracklet\n",++cnt);
+   // std::printf("%d's Face tracklet\n",++cnt);
     ret = this->write_tracklet(f, *tracked_positions);
     if (ret != 0) {
       break;
@@ -235,13 +234,13 @@ int FaceTracker::write_result(
     const cv::Scalar& color =
         colors[face_id % (sizeof(colors) / sizeof(cv::Scalar))];
     cv::rectangle(image, face.tl(), face.br(), color);
-    std::printf("%d's candidate's fitted is %d\n",it-curr_candidates.cbegin(),fitted);
+    //std::printf("%d's candidate's fitted is %d\n",it-curr_candidates.cbegin(),fitted);
     if(fitted == 0){ // candidate
-      std::printf("candidate\n");
+      //std::printf("candidate\n");
       cv::putText(image, std::to_string(face_id), face.tl() + cv::Point(4, 4),
                 cv::FONT_HERSHEY_PLAIN, 1.0, color);
     }else{
-      std::printf("new fitted\n");
+      //std::printf("new fitted\n");
       cv::putText(image, "new", face.tl() + cv::Point(2, 2),
                 cv::FONT_HERSHEY_PLAIN, 1.0, color);
     }
@@ -314,9 +313,9 @@ int FaceTracker::compute_optflow(
         }
       }
     }
-    std::printf("%d's prev candidate's # of optflows is %d\n",it_a-prev_candidates.cbegin(),n_optflows);
+    //std::printf("%d's prev candidate's # of optflows is %d\n",it_a-prev_candidates.cbegin(),n_optflows);
     if (set_mask) {
-      std::printf("run gftt in %d's prev candidate\n",it_a-prev_candidates.cbegin());
+      //std::printf("run gftt in %d's prev candidate\n",it_a-prev_candidates.cbegin());
       mask(rect) = cv::Scalar(1);
       run_gftt = true;
     }
@@ -336,7 +335,7 @@ int FaceTracker::compute_optflow(
   static const TermCriteria term_crit(TermCriteria::COUNT + TermCriteria::EPS,
                                       20, 0.03);
   if (run_gftt) {
-  std::printf("run gftt\n");
+    //std::printf("run gftt\n");
     // Run GFTT on prev_frame for specified ROI.
     cv::goodFeaturesToTrack(prev_gray, prev_points,
                             FaceTracker::kGfttMaxCorners, 0.01, 10, mask);
@@ -384,7 +383,8 @@ int FaceTracker::compute_optflow(
       // Flow is found.
       optflow.next_point = curr_points[i];
       cv::Point2d diff = optflow.next_point - optflow.prev_point;
-      if (cv::norm(diff) > 50.0) {
+      double optflow_distance_thres = prev_frame.cols * 0.04;
+      if (cv::norm(diff) > optflow_distance_thres) {
         optflow.found = false;
       } else {
         optflow.found = true;
@@ -414,19 +414,16 @@ int FaceTracker::write_tracklet(
   cv::Mat tracklet(n_rows * kSize, kNCols * kSize, CV_8UC3);
   tracklet = CV_RGB(255, 255, 255);
   int i = 0;
-  std::printf("# of candidates is %d\n",n_candidates);
   for (auto it = iterators.first; it != iterators.second; ++it, ++i) {
     const FaceCandidate& fc = *it;
     const cv::Rect roi((i % kNCols) * kSize, (i / kNCols) * kSize, kSize, kSize);
     cv::Mat tracklet_roi(tracklet, roi);
     // Draw the image of face candidate.
     fc.resized_image(kSize).copyTo(tracklet_roi);
-    std::printf("resize ok\n");
     // Prepare the information of face candidate.
     char c_str_frame_pos[16];
     std::sprintf(c_str_frame_pos, "%lu", tracked_positions[fc.frameIndex]);
     std::string str_frame_pos(c_str_frame_pos);
-    std::printf("tracked_positions is %lu\n",tracked_positions[fc.frameIndex]);
     // Compute the position for the information text and box including it.
     int baseline;
     cv::Size text_size =
