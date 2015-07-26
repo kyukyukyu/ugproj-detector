@@ -693,9 +693,11 @@ KltFaceAssociator::MatchSet KltFaceAssociator::find_matches(
     } else if (point_selection == kIncoming) {
       is_inside = rect.contains(optflow.next_point);
     }
-      cv::Point2d diff;
-      diff = optflow.next_point - optflow.prev_point;
-      int optflow_distance_thres = rect.width / 10 + 27;
+    cv::Point2d diff;
+    diff = optflow.next_point - optflow.prev_point;
+      
+    const cv::Size& frame_size = this->frame_size_;
+    int optflow_distance_thres = rect.width / 10 + frame_size.width * 0.02;
     if (is_inside && cv::norm(diff) < optflow_distance_thres) {
       //std::printf("optflow distance %f/%d\n",cv::norm(diff),optflow_distance_thres);
       Match m = std::make_pair<cv::Point2d, cv::Point2d>(optflow.prev_point,
@@ -740,7 +742,10 @@ int KltFaceAssociator::compute_inlier(const MatchSet& matches, const Fit& fit_bo
 
     cv::Point diff = after - transformed;
 
-    if(cv::norm(diff)<500)
+    const cv::Size& frame_size = this->frame_size_;
+    int inlier_distance_thres = frame_size.width * 0.2;
+
+    if(cv::norm(diff)<inlier_distance_thres)
         cnt++;
   }
   // std::printf("num of inlier is %d/%d\n",cnt,matches.size());
@@ -761,6 +766,10 @@ std::vector<KltFaceAssociator::Fit> KltFaceAssociator::compute_fit_boxes(
  
   std::printf("ret size is %d\n",ret.size());
   
+
+  const cv::Size& frame_size = this->frame_size_;
+  int fit_box_size_thres = frame_size.width * 0.025;
+
   // If the number of matches is too small for sampling, use all of them and
   // return the single fit box.
   if (num_matches == 2) {
@@ -771,7 +780,7 @@ std::vector<KltFaceAssociator::Fit> KltFaceAssociator::compute_fit_boxes(
     const Match& match2 = *it2;
     Fit fit_box;
     this->compute_fit_box(base_rect, match1, match2, &fit_box);
-    if(fit_box.box.width<35 || fit_box.box.height<35){
+    if(fit_box.box.width<fit_box_size_thres || fit_box.box.height<fit_box_size_thres){
       std::printf("fit box is too small %d\n",fit_box.box.width);
       return ret;
     }
@@ -800,7 +809,7 @@ std::vector<KltFaceAssociator::Fit> KltFaceAssociator::compute_fit_boxes(
         std::printf("compute_fit_box failed\n");
         continue;
       }
-      if(fit_box.box.width<35 || fit_box.box.height<35){
+    if(fit_box.box.width<fit_box_size_thres || fit_box.box.height<fit_box_size_thres){
         std::printf("fit box is too small %d\n",fit_box.box.width);
         continue;
       }
