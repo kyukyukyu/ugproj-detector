@@ -136,10 +136,8 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
   }
 
   delete prev_candidates;
-  
- // int cnt = 0;
+
   for (const Face& f : this->labeled_faces_) {
-   // std::printf("%d's Face tracklet\n",++cnt);
     ret = this->write_tracklet(f, *tracked_positions);
     if (ret != 0) {
       break;
@@ -185,7 +183,6 @@ int FaceTracker::track_frame(
   this->compute_optflow(prev_frame, curr_frame,
                         *prev_candidates, prev_optflows,
                         curr_optflows);
-  //std::puts("done.");
   std::printf("done.\n");
   std::printf("Associating detected faces between previous frame and current "
               "frame... ");
@@ -234,13 +231,10 @@ int FaceTracker::write_result(
     const cv::Scalar& color =
         colors[face_id % (sizeof(colors) / sizeof(cv::Scalar))];
     cv::rectangle(image, face.tl(), face.br(), color);
-    //std::printf("%d's candidate's fitted is %d\n",it-curr_candidates.cbegin(),fitted);
     if(fitted == 0){ // candidate
-      //std::printf("candidate\n");
       cv::putText(image, std::to_string(face_id), face.tl() + cv::Point(4, 4),
                 cv::FONT_HERSHEY_PLAIN, 1.0, color);
     }else{
-      //std::printf("new fitted\n");
       cv::putText(image, "new", face.tl() + cv::Point(2, 2),
                 cv::FONT_HERSHEY_PLAIN, 1.0, color);
     }
@@ -313,9 +307,7 @@ int FaceTracker::compute_optflow(
         }
       }
     }
-    //std::printf("%d's prev candidate's # of optflows is %d\n",it_a-prev_candidates.cbegin(),n_optflows);
     if (set_mask) {
-      //std::printf("run gftt in %d's prev candidate\n",it_a-prev_candidates.cbegin());
       mask(rect) = cv::Scalar(1);
       run_gftt = true;
     }
@@ -335,7 +327,6 @@ int FaceTracker::compute_optflow(
   static const TermCriteria term_crit(TermCriteria::COUNT + TermCriteria::EPS,
                                       20, 0.03);
   if (run_gftt) {
-    //std::printf("run gftt\n");
     // Run GFTT on prev_frame for specified ROI.
     cv::goodFeaturesToTrack(prev_gray, prev_points,
                             FaceTracker::kGfttMaxCorners, 0.01, 10, mask);
