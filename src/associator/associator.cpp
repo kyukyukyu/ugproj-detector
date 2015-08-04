@@ -761,9 +761,10 @@ std::vector<KltFaceAssociator::Fit> KltFaceAssociator::compute_fit_boxes(
       return ret;
     }
     fit_box.num_inliers = this->compute_inlier(matches, fit_box);
-    int inlier_thres = base_rect.width / 10 * 0.9;
-    if(fit_box.num_inliers>=inlier_thres)
+    unsigned int inlier_thres = base_rect.width / 10 * 0.9;
+    if (fit_box.num_inliers >= inlier_thres) {
       ret.push_back(fit_box);
+    }
   }else if(num_matches<2){
     // No fit box
     return ret;
@@ -789,9 +790,10 @@ std::vector<KltFaceAssociator::Fit> KltFaceAssociator::compute_fit_boxes(
       }
       // inlier chk
       fit_box.num_inliers = this->compute_inlier(matches, fit_box);
-      int inlier_thres = base_rect.width / 10 * 0.9;
-      if(fit_box.num_inliers>=inlier_thres)
+      unsigned int inlier_thres = base_rect.width / 10 * 0.9;
+      if (fit_box.num_inliers >= inlier_thres) {
         ret.push_back(fit_box);
+      }
       if (ret.size() >= UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT) {
         break;
       }
