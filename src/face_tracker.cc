@@ -407,7 +407,8 @@ int FaceTracker::write_tracklet(
   int i = 0;
   for (auto it = iterators.first; it != iterators.second; ++it, ++i) {
     const FaceCandidate& fc = *it;
-    const cv::Rect roi((i % kNCols) * kSize, (i / kNCols) * kSize, kSize, kSize);
+    const cv::Rect roi((i % kNCols) * kSize, (i / kNCols) * kSize,
+                       kSize, kSize);
     cv::Mat tracklet_roi(tracklet, roi);
     // Draw the image of face candidate.
     fc.resized_image(kSize).copyTo(tracklet_roi);

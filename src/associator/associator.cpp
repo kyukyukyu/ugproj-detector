@@ -696,8 +696,8 @@ KltFaceAssociator::MatchSet KltFaceAssociator::find_matches_in_rect(
   MatchSet::const_iterator it;
   for (it = matches.cbegin(); it != matches.cend(); ++it) {
     Match match = *it;
-      bool is_inside = false;
-      is_inside = rect.contains(match.first);
+    bool is_inside = false;
+    is_inside = rect.contains(match.first);
     if (is_inside) {
       found_matches.insert(match);
     }
@@ -716,17 +716,21 @@ int KltFaceAssociator::compute_inlier(const MatchSet& matches, const Fit& fit_bo
     cv::Point before = match.first;
     cv::Point after = match.second;
     cv::Point transformed;
-
-    transformed.x = (before.x - fit_box.origin.x) * fit_box.sx + fit_box.a + fit_box.origin.x;
-    transformed.y = (before.y - fit_box.origin.y) * fit_box.sy + fit_box.b + fit_box.origin.y;
+    transformed.x =
+        (before.x - fit_box.origin.x) * fit_box.sx + fit_box.a +
+        fit_box.origin.x;
+    transformed.y =
+        (before.y - fit_box.origin.y) * fit_box.sy + fit_box.b +
+        fit_box.origin.y;
 
     cv::Point diff = after - transformed;
 
     const cv::Size& frame_size = this->frame_size_;
     int inlier_distance_thres = frame_size.width * 0.2;
 
-    if(cv::norm(diff)<inlier_distance_thres)
+    if (cv::norm(diff) < inlier_distance_thres) {
         cnt++;
+    }
   }
   return cnt;
 }
@@ -756,7 +760,8 @@ std::vector<KltFaceAssociator::Fit> KltFaceAssociator::compute_fit_boxes(
     const Match& match2 = *it2;
     Fit fit_box;
     this->compute_fit_box(base_rect, match1, match2, &fit_box);
-    if(fit_box.box.width<fit_box_size_thres || fit_box.box.height<fit_box_size_thres){
+    if (fit_box.box.width < fit_box_size_thres ||
+        fit_box.box.height < fit_box_size_thres) {
       // Fit box is too small.
       return ret;
     }
@@ -765,11 +770,10 @@ std::vector<KltFaceAssociator::Fit> KltFaceAssociator::compute_fit_boxes(
     if (fit_box.num_inliers >= inlier_thres) {
       ret.push_back(fit_box);
     }
-  }else if(num_matches<2){
+  } else if (num_matches < 2) {
     // No fit box
     return ret;
-  }
-  else {
+  } else {
     std::vector< std::pair<unsigned int, unsigned int> > idx_pairs =
         KltFaceAssociator::list_index_pairs(num_matches, true);
     ret.reserve(UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT);
@@ -784,11 +788,12 @@ std::vector<KltFaceAssociator::Fit> KltFaceAssociator::compute_fit_boxes(
         // Failed to compute fit box.
         continue;
       }
-    if(fit_box.box.width<fit_box_size_thres || fit_box.box.height<fit_box_size_thres){
+      if (fit_box.box.width < fit_box_size_thres ||
+          fit_box.box.height < fit_box_size_thres) {
         // Fit box is too small.
         continue;
       }
-      // inlier chk
+      // Check inliers.
       fit_box.num_inliers = this->compute_inlier(matches, fit_box);
       unsigned int inlier_thres = base_rect.width / 10 * 0.9;
       if (fit_box.num_inliers >= inlier_thres) {
@@ -797,7 +802,6 @@ std::vector<KltFaceAssociator::Fit> KltFaceAssociator::compute_fit_boxes(
       if (ret.size() >= UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT) {
         break;
       }
-
     }
   }
 
@@ -811,7 +815,6 @@ bool KltFaceAssociator::compute_fit_box(const cv::Rect& base_rect,
   // The top-left point of base_rect is needed to set this as origin for
   // computation.
   cv::Point origin = base_rect.tl();
-
   fit_box->origin = origin;
   // Point p_i_j is the outgoing (i = 1) / incoming (i = 2) point of the j-th
   // match.
@@ -857,34 +860,34 @@ bool KltFaceAssociator::compute_fit_box(const cv::Rect& base_rect,
   fit_box->b = b;
 
   if (sx >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD ||
-    1/sx >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD ||
-    sy >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD ||
-    1/sy >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD) {
+      1/sx >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD ||
+      sy >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD ||
+      1/sy >= UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD) {
     return false;
   }
 
   int fitbox_l = base_rect.x + a;
   int fitbox_t = base_rect.y + b;
-  int fitbox_r = (int)(fitbox_l + sx * base_rect.width);
-  int fitbox_b = (int)(fitbox_t + sy * base_rect.height);
+  int fitbox_r = (int) (fitbox_l + sx * base_rect.width);
+  int fitbox_b = (int) (fitbox_t + sy * base_rect.height);
 
   // keep in boundary
   const cv::Size& frame_size = this->frame_size_;
-  fitbox_l = std::min( std::max(0, fitbox_l), frame_size.width);
-  fitbox_t = std::min( std::max(0, fitbox_t), frame_size.height);
-  fitbox_r = std::min( std::max(0, fitbox_r), frame_size.width);
-  fitbox_b = std::min( std::max(0, fitbox_b), frame_size.height);
+  fitbox_l = std::min(std::max(0, fitbox_l), frame_size.width);
+  fitbox_t = std::min(std::max(0, fitbox_t), frame_size.height);
+  fitbox_r = std::min(std::max(0, fitbox_r), frame_size.width);
+  fitbox_b = std::min(std::max(0, fitbox_b), frame_size.height);
 
   fit_box->box.x = fitbox_l;
   fit_box->box.y = fitbox_t;
   fit_box->box.width = fitbox_r - fitbox_l;
   fit_box->box.height = fitbox_b - fitbox_t;
 
-  if(fit_box->box.width<0 ||
-     fit_box->box.height<0 ||
-     (double)fit_box->box.width/(double)fit_box->box.height > 1.5 ||
-     (double)fit_box->box.height/(double)fit_box->box.width > 1.5){
-      return false;
+  if (fit_box->box.width < 0 ||
+      fit_box->box.height < 0 ||
+      (double) fit_box->box.width / (double) fit_box->box.height > 1.5 ||
+      (double) fit_box->box.height / (double) fit_box->box.width > 1.5) {
+    return false;
   }
 
   return true;
