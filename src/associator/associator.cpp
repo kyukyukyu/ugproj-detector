@@ -611,9 +611,6 @@ void KltFaceAssociator::calculateProb() {
     }
 
     const cv::Rect& fit_box = best_fit.box;
-
-    if(n_next_cdds == 0){
-    }
     for (j = 0; j < n_next_cdds; ++j) {
       const cv::Rect& cdd_box = this->nextCandidates[j].rect;
       cv::Rect intersection = fit_box & cdd_box;
@@ -639,9 +636,6 @@ void KltFaceAssociator::compute_best_fits() {
     // Compute fit boxes using RANSAC-based algorithm.
     const std::vector<Fit> fit_boxes =
         this->compute_fit_boxes(outgoing_matches, prev_cdd_box);
-
-    if(!fit_boxes.size()){
-    }
 
     // Find the best fit box.
     double max_inlier = 0;
