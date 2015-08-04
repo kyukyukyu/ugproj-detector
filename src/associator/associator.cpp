@@ -738,67 +738,43 @@ std::vector<KltFaceAssociator::Fit> KltFaceAssociator::compute_fit_boxes(
   const MatchSet::size_type num_matches = matches.size();
   // Const-iterators for (random-)picking two matches.
   MatchSet::const_iterator it1, it2;
-  // The number of inliers in fit box.
-  int num_inlier;
-
+  // Size of frame.
   const cv::Size& frame_size = this->frame_size_;
+  // Threshold value for fit box size. Applied to both width and height.
   int fit_box_size_thres = frame_size.width * 0.025;
-
-  // If the number of matches is too small for sampling, use all of them and
-  // return the single fit box.
-  if (num_matches == 2) {
-    it1 = matches.cbegin();
-    it2 = matches.cend();
-    std::advance(it2, -1);
+  if (num_matches < 2) {
+    // No fit box can be computed.
+    return ret;
+  }
+  std::vector< std::pair<unsigned int, unsigned int> > idx_pairs =
+      KltFaceAssociator::list_index_pairs(num_matches, true);
+  ret.reserve(UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT);
+  for (const auto& idx_pair : idx_pairs) {
+    it1 = it2 = matches.cbegin();
+    std::advance(it1, idx_pair.first);
+    std::advance(it2, idx_pair.second);
     const Match& match1 = *it1;
     const Match& match2 = *it2;
     Fit fit_box;
-    this->compute_fit_box(base_rect, match1, match2, &fit_box);
+    if (!this->compute_fit_box(base_rect, match1, match2, &fit_box)) {
+      // Failed to compute fit box.
+      continue;
+    }
     if (fit_box.box.width < fit_box_size_thres ||
         fit_box.box.height < fit_box_size_thres) {
       // Fit box is too small.
-      return ret;
+      continue;
     }
+    // Check inliers.
     fit_box.num_inliers = this->compute_inlier(matches, fit_box);
     unsigned int inlier_thres = base_rect.width / 10 * 0.9;
     if (fit_box.num_inliers >= inlier_thres) {
       ret.push_back(fit_box);
     }
-  } else if (num_matches < 2) {
-    // No fit box
-    return ret;
-  } else {
-    std::vector< std::pair<unsigned int, unsigned int> > idx_pairs =
-        KltFaceAssociator::list_index_pairs(num_matches, true);
-    ret.reserve(UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT);
-    for (const auto& idx_pair : idx_pairs) {
-      it1 = it2 = matches.cbegin();
-      std::advance(it1, idx_pair.first);
-      std::advance(it2, idx_pair.second);
-      const Match& match1 = *it1;
-      const Match& match2 = *it2;
-      Fit fit_box;
-      if (!this->compute_fit_box(base_rect, match1, match2, &fit_box)) {
-        // Failed to compute fit box.
-        continue;
-      }
-      if (fit_box.box.width < fit_box_size_thres ||
-          fit_box.box.height < fit_box_size_thres) {
-        // Fit box is too small.
-        continue;
-      }
-      // Check inliers.
-      fit_box.num_inliers = this->compute_inlier(matches, fit_box);
-      unsigned int inlier_thres = base_rect.width / 10 * 0.9;
-      if (fit_box.num_inliers >= inlier_thres) {
-        ret.push_back(fit_box);
-      }
-      if (ret.size() >= UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT) {
-        break;
-      }
+    if (ret.size() >= UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT) {
+      break;
     }
   }
-
   return ret;
 }
 
