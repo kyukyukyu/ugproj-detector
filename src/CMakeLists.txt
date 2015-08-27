@@ -12,7 +12,7 @@ list(APPEND project_SRCS "optflow/colorcode.cpp")
 list(APPEND project_SRCS "optflow/manager.hpp")
 list(APPEND project_SRCS "optflow/manager.cpp")
 list(APPEND project_SRCS "main.cpp")
-set(project_LIBS ${Boost_LIBRARIES} ${OpenCV_LIBS} celiu_optflow)
+set(project_LIBS ${Boost_LIBRARIES} ${OpenCV_LIBS} celiu_optflow yaml-cpp)
 set(project_BIN ${PROJECT_NAME})
 
 # Load celiu-optflow library
