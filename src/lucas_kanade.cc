@@ -50,7 +50,6 @@ bool parse_args(int argc, const char** argv, ugproj::Arguments* args) {
   namespace po = boost::program_options;
 
   try {
-    std::string assoc_method_s;
     po::options_description generic_options("Generic options");
     po::options_description config_options("Configuration");
     generic_options.add_options()
@@ -72,20 +71,20 @@ bool parse_args(int argc, const char** argv, ugproj::Arguments* args) {
        "path to output directory.")
     ;
     config_options.add_options()
-      ("cascade-classifier",
-       po::value<std::string>()->required(),
-       "path to cascade classifier file.")
-      ("target-fps",
+      ("scan.target_fps",
        po::value<double>(&args->target_fps)->default_value(10.0),
        "fps at which video will be scanned.")
-      ("detection-scale",
+      ("scan.detection_scale",
        po::value<double>(&args->detection_scale)->default_value(1.0),
        "scale at which image will be transformed during detection.")
-      ("association-threshold",
+      ("detection.cascade_classifier_filepath",
+       po::value<std::string>()->required(),
+       "path to cascade classifier file.")
+      ("association.prob_threshold",
        po::value<double>(&args->assoc_threshold)->default_value(0.5),
        "threshold for probability used during association.")
-      ("association-method",
-       po::value<std::string>(&assoc_method_s)->required(),
+      ("association.method",
+       po::value<std::string>()->required(),
        "association method. should be one of 'intersect', and 'optflow'.")
     ;
 
@@ -115,13 +114,14 @@ bool parse_args(int argc, const char** argv, ugproj::Arguments* args) {
 
     // Resolve path options from config file into path objects.
     boost::filesystem::path cascade_filepath =
-        vm["cascade-classifier"].as<std::string>();
+        vm["detection.cascade_classifier_filepath"].as<std::string>();
     args->cascade_filepath =
         cascade_filepath.is_absolute() ?
         cascade_filepath :
         config_dirpath / cascade_filepath;
 
     ugproj::AssociationMethod& assoc_method = args->assoc_method;
+    const auto& assoc_method_s = vm["association.method"].as<std::string>();
     if (assoc_method_s == "intersect") {
       assoc_method = ugproj::ASSOC_INTERSECT;
     } else if (assoc_method_s == "optflow") {
