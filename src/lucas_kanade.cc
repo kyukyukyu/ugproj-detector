@@ -49,39 +49,62 @@ bool parse_args(int argc, const char** argv, ugproj::Arguments* args) {
   namespace po = boost::program_options;
 
   try {
+    std::string config_filepath;
     std::string assoc_method_s;
-    po::options_description desc("Allowed options");
-    desc.add_options()
+    po::options_description generic_options("Generic options");
+    po::options_description config_options("Configuration");
+    generic_options.add_options()
       ("help", "produce help message.")
+      ("config-file,c",
+       po::value<std::string>(&config_filepath)
+         ->value_name("config_filepath")
+         ->required(),
+       "path to config file.")
       ("video-file,v",
-       po::value<std::string>(&args->video_filename)->required(),
+       po::value<std::string>(&args->video_filename)
+         ->value_name("video_filepath")
+         ->required(),
        "path to input video file.")
-      ("cascade-classifier,c",
+      ("output-dir,o",
+       po::value<std::string>(&args->output_dir)
+         ->value_name("output_dir")
+         ->default_value("output"),
+       "path to output directory.")
+    ;
+    config_options.add_options()
+      ("cascade-classifier",
        po::value<std::string>(&args->cascade_filename)->required(),
        "path to cascade classifier file.")
-      ("output-dir,o",
-       po::value<std::string>(&args->output_dir)->default_value("output"),
-       "path to output directory.")
-      ("target-fps,f",
+      ("target-fps",
        po::value<double>(&args->target_fps)->default_value(10.0),
        "fps at which video will be scanned.")
-      ("detection-scale,s",
+      ("detection-scale",
        po::value<double>(&args->detection_scale)->default_value(1.0),
        "scale at which image will be transformed during detection.")
-      ("association-threshold,a",
+      ("association-threshold",
        po::value<double>(&args->assoc_threshold)->default_value(0.5),
        "threshold for probability used during association.")
-      ("association-method,m",
+      ("association-method",
        po::value<std::string>(&assoc_method_s)->required(),
        "association method. should be one of 'intersect', and 'optflow'.")
     ;
 
+    po::options_description visible_options("Allowed options");
+    visible_options.add(generic_options);
+
     po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::store(po::parse_command_line(argc, argv, visible_options), vm);
     if (vm.count("help")) {
-      std::cout << desc << '\n';
+      std::cout << visible_options << '\n';
       return false;
     }
+    po::notify(vm);
+
+    po::store(
+        po::parse_config_file<char>(
+          vm["config-file"].as<std::string>().c_str(),
+          config_options),
+        vm);
     po::notify(vm);
 
     ugproj::AssociationMethod& assoc_method = args->assoc_method;
