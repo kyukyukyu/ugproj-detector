@@ -18,8 +18,4 @@ include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 include_directories(${EIGEN_INCLUDE_DIRS})
 
-# Build jbeder/yaml-cpp
-add_subdirectory(thirdparty/yaml-cpp)
-include_directories("${MAINFOLDER}/thirdparty/yaml-cpp/include")
-
 add_subdirectory(src)
