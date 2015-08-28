@@ -13,7 +13,7 @@ namespace ugproj {
 
 class FileInput {
   public:
-    int open(const Arguments& args);
+    int open(const Configuration& cfg);
     cv::VideoCapture& video();
     cv::CascadeClassifier& cascade();
 
@@ -24,7 +24,7 @@ class FileInput {
 
 class FileWriter {
   public:
-    int init(const Arguments& args);
+    int init(const Configuration& cfg);
     int write_image(const cv::Mat& image, const std::string& filename) const;
     // Opens a video file to write with given key string and properties.
     // Returns non-zero value if the file is not opened correctly, otherwise 0.

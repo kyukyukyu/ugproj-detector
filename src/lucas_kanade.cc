@@ -10,24 +10,24 @@
 #include <boost/program_options.hpp>
 
 
-bool parse_args(int argc, const char** argv, ugproj::Arguments* args);
+bool parse_args(int argc, const char** argv, ugproj::Configuration* cfg);
 
 int main(int argc, const char** argv) {
   int ret = 0;
 
-  ugproj::Arguments args;
-  if (!parse_args(argc, argv, &args)) {
+  ugproj::Configuration cfg;
+  if (!parse_args(argc, argv, &cfg)) {
     return 1;
   }
 
   ugproj::FileInput input;
-  ret = input.open(args);
+  ret = input.open(cfg);
   if (ret != 0) {
     return ret;
   }
 
   ugproj::FileWriter writer;
-  ret = writer.init(args);
+  ret = writer.init(cfg);
   if (ret != 0) {
     return ret;
   }
@@ -37,7 +37,7 @@ int main(int argc, const char** argv) {
   ugproj::FaceTracker tracker;
   tracker.set_input(&input);
   tracker.set_writer(&writer);
-  tracker.set_args(&args);
+  tracker.set_cfg(&cfg);
   ret = tracker.track(&tracked_positions);
   if (ret != 0) {
     return ret;
@@ -46,7 +46,7 @@ int main(int argc, const char** argv) {
   return 0;
 }
 
-bool parse_args(int argc, const char** argv, ugproj::Arguments* args) {
+bool parse_args(int argc, const char** argv, ugproj::Configuration* cfg) {
   namespace po = boost::program_options;
 
   try {
@@ -72,16 +72,16 @@ bool parse_args(int argc, const char** argv, ugproj::Arguments* args) {
     ;
     config_options.add_options()
       ("scan.target_fps",
-       po::value<double>(&args->target_fps)->default_value(10.0),
+       po::value<double>(&cfg->target_fps)->default_value(10.0),
        "fps at which video will be scanned.")
       ("scan.detection_scale",
-       po::value<double>(&args->detection_scale)->default_value(1.0),
+       po::value<double>(&cfg->detection_scale)->default_value(1.0),
        "scale at which image will be transformed during detection.")
       ("detection.cascade_classifier_filepath",
        po::value<std::string>()->required(),
        "path to cascade classifier file.")
       ("association.prob_threshold",
-       po::value<double>(&args->assoc_threshold)->default_value(0.5),
+       po::value<double>(&cfg->assoc_threshold)->default_value(0.5),
        "threshold for probability used during association.")
       ("association.method",
        po::value<std::string>()->required(),
@@ -100,8 +100,8 @@ bool parse_args(int argc, const char** argv, ugproj::Arguments* args) {
     po::notify(vm);
 
     // Resolve path options from command line into path objects.
-    args->video_filepath = vm["video-file"].as<std::string>();
-    args->output_dirpath = vm["output-dir"].as<std::string>();
+    cfg->video_filepath = vm["video-file"].as<std::string>();
+    cfg->output_dirpath = vm["output-dir"].as<std::string>();
     boost::filesystem::path config_filepath =
         vm["config-file"].as<std::string>();
     auto config_dirpath = config_filepath.parent_path();
@@ -115,12 +115,12 @@ bool parse_args(int argc, const char** argv, ugproj::Arguments* args) {
     // Resolve path options from config file into path objects.
     boost::filesystem::path cascade_filepath =
         vm["detection.cascade_classifier_filepath"].as<std::string>();
-    args->cascade_filepath =
+    cfg->cascade_filepath =
         cascade_filepath.is_absolute() ?
         cascade_filepath :
         config_dirpath / cascade_filepath;
 
-    ugproj::AssociationMethod& assoc_method = args->assoc_method;
+    ugproj::AssociationMethod& assoc_method = cfg->assoc_method;
     const auto& assoc_method_s = vm["association.method"].as<std::string>();
     if (assoc_method_s == "intersect") {
       assoc_method = ugproj::ASSOC_INTERSECT;

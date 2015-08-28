@@ -40,7 +40,7 @@ enum AssociationMethod {
   ASSOC_SIFT,
 };
 
-struct Arguments {
+struct Configuration {
   boost::filesystem::path video_filepath;
   boost::filesystem::path cascade_filepath;
   boost::filesystem::path output_dirpath;
