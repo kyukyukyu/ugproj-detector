@@ -116,6 +116,10 @@ bool parse_args(int argc, const char** argv, ugproj::Arguments* args) {
     // Resolve path options from config file into path objects.
     boost::filesystem::path cascade_filepath =
         vm["cascade-classifier"].as<std::string>();
+    args->cascade_filepath =
+        cascade_filepath.is_absolute() ?
+        cascade_filepath :
+        config_dirpath / cascade_filepath;
 
     ugproj::AssociationMethod& assoc_method = args->assoc_method;
     if (assoc_method_s == "intersect") {
