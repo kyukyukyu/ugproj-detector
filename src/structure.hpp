@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <boost/filesystem.hpp>
 #include <opencv2/opencv.hpp>
 
 namespace ugproj {
@@ -40,9 +41,9 @@ enum AssociationMethod {
 };
 
 struct Arguments {
-  std::string video_filename;
-  std::string cascade_filename;
-  std::string output_dir;
+  boost::filesystem::path video_filepath;
+  boost::filesystem::path cascade_filepath;
+  boost::filesystem::path output_dirpath;
   double target_fps;
   double detection_scale;
   double assoc_threshold;

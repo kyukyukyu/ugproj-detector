@@ -6,6 +6,7 @@
 
 #include <string>
 #include <vector>
+#include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
 
@@ -49,31 +50,30 @@ bool parse_args(int argc, const char** argv, ugproj::Arguments* args) {
   namespace po = boost::program_options;
 
   try {
-    std::string config_filepath;
     std::string assoc_method_s;
     po::options_description generic_options("Generic options");
     po::options_description config_options("Configuration");
     generic_options.add_options()
       ("help", "produce help message.")
       ("config-file,c",
-       po::value<std::string>(&config_filepath)
+       po::value<std::string>()
          ->value_name("config_filepath")
          ->required(),
        "path to config file.")
       ("video-file,v",
-       po::value<std::string>(&args->video_filename)
+       po::value<std::string>()
          ->value_name("video_filepath")
          ->required(),
        "path to input video file.")
       ("output-dir,o",
-       po::value<std::string>(&args->output_dir)
+       po::value<std::string>()
          ->value_name("output_dir")
          ->default_value("output"),
        "path to output directory.")
     ;
     config_options.add_options()
       ("cascade-classifier",
-       po::value<std::string>(&args->cascade_filename)->required(),
+       po::value<std::string>()->required(),
        "path to cascade classifier file.")
       ("target-fps",
        po::value<double>(&args->target_fps)->default_value(10.0),
@@ -100,12 +100,22 @@ bool parse_args(int argc, const char** argv, ugproj::Arguments* args) {
     }
     po::notify(vm);
 
+    // Resolve path options from command line into path objects.
+    args->video_filepath = vm["video-file"].as<std::string>();
+    args->output_dirpath = vm["output-dir"].as<std::string>();
+    boost::filesystem::path config_filepath =
+        vm["config-file"].as<std::string>();
+    auto config_dirpath = config_filepath.parent_path();
+
+    // Load configuration from config file.
     po::store(
-        po::parse_config_file<char>(
-          vm["config-file"].as<std::string>().c_str(),
-          config_options),
+        po::parse_config_file<char>(config_filepath.c_str(), config_options),
         vm);
     po::notify(vm);
+
+    // Resolve path options from config file into path objects.
+    boost::filesystem::path cascade_filepath =
+        vm["cascade-classifier"].as<std::string>();
 
     ugproj::AssociationMethod& assoc_method = args->assoc_method;
     if (assoc_method_s == "intersect") {

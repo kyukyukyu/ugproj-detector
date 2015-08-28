@@ -5,10 +5,10 @@ namespace fs = boost::filesystem;
 namespace ugproj {
 
 int FileInput::open(const Arguments& args) {
-  if (!this->video_.open(args.video_filename)) {
+  if (!this->video_.open(args.video_filepath.native())) {
     return 1;
   }
-  if (!this->cascade_.load(args.cascade_filename)) {
+  if (!this->cascade_.load(args.cascade_filepath.native())) {
     return 1;
   }
   return 0;
@@ -23,7 +23,7 @@ cv::CascadeClassifier& FileInput::cascade() {
 }
 
 int FileWriter::init(const Arguments& args) {
-  this->output_path_ = args.output_dir;
+  this->output_path_ = args.output_dirpath;
   if (!fs::is_directory(this->output_path_) &&
       !fs::create_directory(this->output_path_)) {
     return 1;
