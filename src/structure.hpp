@@ -41,13 +41,22 @@ enum AssociationMethod {
 };
 
 struct Configuration {
+  struct ScanSection {
+    double target_fps;
+    double detection_scale;
+  };
+  struct DetectionSection {
+    boost::filesystem::path cascade_filepath;
+  };
+  struct AssociationSection {
+    double threshold;
+    AssociationMethod method;
+  };
   boost::filesystem::path video_filepath;
-  boost::filesystem::path cascade_filepath;
   boost::filesystem::path output_dirpath;
-  double target_fps;
-  double detection_scale;
-  double assoc_threshold;
-  AssociationMethod assoc_method;
+  ScanSection scan;
+  DetectionSection detection;
+  AssociationSection association;
 };
 
 class FaceCandidate {

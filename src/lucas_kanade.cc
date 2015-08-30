@@ -72,16 +72,16 @@ bool parse_args(int argc, const char** argv, ugproj::Configuration* cfg) {
     ;
     config_options.add_options()
       ("scan.target_fps",
-       po::value<double>(&cfg->target_fps)->default_value(10.0),
+       po::value<double>(&cfg->scan.target_fps)->default_value(10.0),
        "fps at which video will be scanned.")
       ("scan.detection_scale",
-       po::value<double>(&cfg->detection_scale)->default_value(1.0),
+       po::value<double>(&cfg->scan.detection_scale)->default_value(1.0),
        "scale at which image will be transformed during detection.")
       ("detection.cascade_classifier_filepath",
        po::value<std::string>()->required(),
        "path to cascade classifier file.")
       ("association.prob_threshold",
-       po::value<double>(&cfg->assoc_threshold)->default_value(0.5),
+       po::value<double>(&cfg->association.threshold)->default_value(0.5),
        "threshold for probability used during association.")
       ("association.method",
        po::value<std::string>()->required(),
@@ -115,12 +115,12 @@ bool parse_args(int argc, const char** argv, ugproj::Configuration* cfg) {
     // Resolve path options from config file into path objects.
     boost::filesystem::path cascade_filepath =
         vm["detection.cascade_classifier_filepath"].as<std::string>();
-    cfg->cascade_filepath =
+    cfg->detection.cascade_filepath =
         cascade_filepath.is_absolute() ?
         cascade_filepath :
         config_dirpath / cascade_filepath;
 
-    ugproj::AssociationMethod& assoc_method = cfg->assoc_method;
+    ugproj::AssociationMethod& assoc_method = cfg->association.method;
     const auto& assoc_method_s = vm["association.method"].as<std::string>();
     if (assoc_method_s == "intersect") {
       assoc_method = ugproj::ASSOC_INTERSECT;

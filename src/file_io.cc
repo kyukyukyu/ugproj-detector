@@ -8,7 +8,7 @@ int FileInput::open(const Configuration& cfg) {
   if (!this->video_.open(cfg.video_filepath.native())) {
     return 1;
   }
-  if (!this->cascade_.load(cfg.cascade_filepath.native())) {
+  if (!this->cascade_.load(cfg.detection.cascade_filepath.native())) {
     return 1;
   }
   return 0;

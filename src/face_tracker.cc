@@ -47,7 +47,7 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
   ret = this->writer_->open_video_file(
       this->kVideoKey,
       this->kVideoFilename,
-      this->cfg_->target_fps,
+      this->cfg_->scan.target_fps,
       cv::Size(video_props.frame_width, video_props.frame_height));
   if (ret) {
     return ret;
@@ -85,7 +85,7 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
       continue;
     }
     // If target fps is set to zero, every frame will be tracked.
-    const double target_fps = this->cfg_ ? this->cfg_->target_fps : 0.0;
+    const double target_fps = this->cfg_ ? this->cfg_->scan.target_fps : 0.0;
     const double mod = target_fps == 0.0 ?
         0.0 : std::fmod(pos, video_props.fps / target_fps);
     static const double epsilon = std::numeric_limits<double>::epsilon();
@@ -189,7 +189,7 @@ int FaceTracker::track_frame(
   KltFaceAssociator associator(this->labeled_faces_,
                                *prev_candidates, *curr_candidates,
                                curr_index, curr_frame, *curr_optflows,
-                               this->cfg_->assoc_threshold);
+                               this->cfg_->association.threshold);
   associator.associate();
   std::puts("done.");
 
@@ -266,7 +266,7 @@ int FaceTracker::detect_faces(const temp_idx_t curr_index,
                               FaceDetector* detector,
                               FaceCandidateList* curr_candidates) {
   std::vector<cv::Rect> rects;
-  detector->detectFaces(curr_frame, rects, this->cfg_->detection_scale);
+  detector->detectFaces(curr_frame, rects, this->cfg_->scan.detection_scale);
   for (std::vector<cv::Rect>::const_iterator it = rects.cbegin();
        it != rects.cend();
        ++it) {
