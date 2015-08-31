@@ -29,7 +29,7 @@ void FaceDetector::detectFaces(const Mat& frame, vector<Rect>& rects, const floa
     cascade.detectMultiScale(
             gray,
             facesInGray,
-            1.1,
+            this->cfg_.scale,
             2,
             0 | CASCADE_SCALE_IMAGE,
             Size(30, 30));

@@ -42,7 +42,7 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
   cv::VideoCapture& video = this->input_->video();
   VideoProperties video_props;
   this->get_properties(&video, &video_props);
-  FaceDetector detector(cascade);
+  FaceDetector detector(cascade, this->cfg_->detection);
 
   ret = this->writer_->open_video_file(
       this->kVideoKey,
