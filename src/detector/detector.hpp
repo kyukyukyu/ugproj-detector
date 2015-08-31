@@ -5,14 +5,16 @@
 #include <vector>
 
 namespace ugproj {
-    class FaceDetector {
-        private:
-            cv::CascadeClassifier& cascade;
-        public:
-            FaceDetector(cv::CascadeClassifier& cascade):
-                cascade(cascade) {};
-            void detectFaces(const cv::Mat& frame, std::vector<cv::Rect>& rects, const float scale);
-    };
+
+class FaceDetector {
+  public:
+    FaceDetector(cv::CascadeClassifier& cascade) : cascade(cascade) {};
+    void detectFaces(const cv::Mat& frame, std::vector<cv::Rect>& rects,
+                     const float scale);
+  private:
+    cv::CascadeClassifier& cascade;
+};
+
 } // ugproj
 
 #endif
