@@ -42,20 +42,69 @@ enum AssociationMethod {
 
 struct Configuration {
   struct ScanSection {
+    // Fps at which video will be scanned.
     double target_fps;
+    // Scale at which image will be transformed during detection.
     double detection_scale;
   };
   struct DetectionSection {
+    // Path to cascade classifier file.
     boost::filesystem::path cascade_filepath;
+    // Scale factor for cascade classifier used for detection.
+    double scale;
+  };
+  struct GfttSection {
+    // Maximum number of corners detected by GFTT algorithm.
+    int max_n;
+    // Quality level parameter used by GFTT algorithm.
+    double quality_level;
+    // Minimum possible Euclidean distance between corners detected by GFTT
+    // algorithm.
+    double min_distance;
+  };
+  struct SubpixelSection {
+    // Half of the side length of the search window.
+    int window_size;
+    // Half of the size of the dead region in the middle of the search zone.
+    // -1 indicates that there is no such size.
+    int zero_zone_size;
+    // Termination criteria for iterative search.
+    cv::TermCriteria term_crit;
+  };
+  struct LucasKanadeSection {
+    // Size of the search window at each pyramid level.
+    int window_size;
+    // Maximum number of pyramid levels.
+    int max_level;
+    // Termination criteria for iterative search.
+    cv::TermCriteria term_crit;
+    // Coefficient for threshold on optical flow length.
+    double coeff_thres_len;
   };
   struct AssociationSection {
+    // Threshold for probability used during association.
     double threshold;
+    // Association method. should be one of 'intersect', and 'optflow'.
     AssociationMethod method;
+    // Coefficient for threshold on the length of each optical flow.
+    double coeff_thres_optflow;
+    // Coefficient for threshold on the length of each computed match.
+    double coeff_thres_match;
+    // Coefficient for threshold on the size of each fit box.
+    double coeff_thres_box;
+    // Coefficient for threshold on the number of inliers in each fit box.
+    double coeff_thres_inlier;
+    // Coefficient for threshold on the aspect ratio of each fit box. Should
+    // be greater than or equal to 1.0.
+    double coeff_thres_aspect;
   };
   boost::filesystem::path video_filepath;
   boost::filesystem::path output_dirpath;
   ScanSection scan;
   DetectionSection detection;
+  GfttSection gftt;
+  SubpixelSection subpixel;
+  LucasKanadeSection lucas_kanade;
   AssociationSection association;
 };
 
