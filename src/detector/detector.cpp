@@ -5,7 +5,7 @@
 
 using namespace std;
 using namespace cv;
-using namespace ugproj;
+namespace ugproj {
 
 void FaceDetector::detectFaces(const Mat& frame, vector<Rect>& rects, const float scale) {
     const cv::Scalar& lowerBound = this->cfg_.skin_lower;
@@ -52,3 +52,4 @@ void FaceDetector::detectFaces(const Mat& frame, vector<Rect>& rects, const floa
     }
 }
 
+} // ugproj
