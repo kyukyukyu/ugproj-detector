@@ -8,8 +8,8 @@ using namespace cv;
 using namespace ugproj;
 
 void FaceDetector::detectFaces(const Mat& frame, vector<Rect>& rects, const float scale) {
-    const static Scalar lowerBound(0, 133, 77);
-    const static Scalar upperBound(255, 173, 127);
+    const cv::Scalar& lowerBound = this->cfg_.skin_lower;
+    const cv::Scalar& upperBound = this->cfg_.skin_upper;
     Mat ycrcb;
     Mat mask;
     Mat gray;

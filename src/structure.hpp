@@ -48,6 +48,10 @@ struct Configuration {
     double detection_scale;
   };
   struct DetectionSection {
+    // Lower bound for skin color range in YCrCb.
+    cv::Scalar skin_lower;
+    // Upper bound for skin color range in YCrCb.
+    cv::Scalar skin_upper;
     // Path to cascade classifier file.
     boost::filesystem::path cascade_filepath;
     // Scale factor for cascade classifier used for detection.

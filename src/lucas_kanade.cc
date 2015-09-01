@@ -4,6 +4,7 @@
 #include "file_io.h"
 #include "structure.hpp"
 
+#include <cstdio>
 #include <string>
 #include <vector>
 #include <boost/filesystem.hpp>
@@ -81,6 +82,14 @@ bool parse_args(int argc, const char** argv, ugproj::Configuration* cfg) {
       ("detection.cascade_classifier_filepath",
        po::value<std::string>()->required(),
        "path to cascade classifier file.")
+      ("detection.skin_lower",
+       po::value<cv::Scalar>(&cfg->detection.skin_lower)->
+           default_value(cv::Scalar(0, 133, 77)),
+       "lower bound for skin color range in YCrCb.")
+      ("detection.skin_upper",
+       po::value<cv::Scalar>(&cfg->detection.skin_upper)->
+           default_value(cv::Scalar(255, 173, 127)),
+       "upper bound for skin color range in YCrCb.")
       ("detection.scale",
        po::value<double>(&cfg->detection.scale)->default_value(1.1),
        "scale factor for cascade classifier used for detection.")
@@ -211,4 +220,27 @@ bool parse_args(int argc, const char** argv, ugproj::Configuration* cfg) {
   }
 
   return true;
+}
+
+// Validates if input for program options is in the form of '255,255,255' and
+// converts it to cv::Scalar object.
+template <> void boost::program_options::validate(
+    boost::any& v,
+    const std::vector<std::string>& values,
+    cv::Scalar*,
+    long) {
+  namespace po = boost::program_options;
+
+  // No previous assignment allowed.
+  po::validators::check_first_occurrence(v);
+  // No more than one string allowed.
+  const std::string& s = po::validators::get_single_string(values);
+
+  // Scan three numbers from the string.
+  int n1, n2, n3;
+  if (std::sscanf(s.c_str(), "%3u , %3u , %3u", &n1, &n2, &n3) == 3) {
+    v = boost::any(cv::Scalar(n1, n2, n3));
+  } else {
+    throw po::validation_error::invalid_option_value;
+  }
 }
