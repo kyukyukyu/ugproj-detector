@@ -280,6 +280,11 @@ int FaceTracker::compute_optflow(
     const std::vector<SparseOptflow>& prev_optflows,
     std::vector<SparseOptflow>* curr_optflows) {
   std::printf("compute_optflow\n");
+  // Prepare sections of configuration object.
+  const auto& cfg_gftt = this->cfg_->gftt;
+  const auto& cfg_subpixel = this->cfg_->subpixel;
+  const auto& cfg_lk = this->cfg_->lucas_kanade;
+
   // Compute mask for GFTT.
   cv::Mat mask(prev_frame.size(), CV_8UC1, cv::Scalar(0));
   bool run_gftt = false;
@@ -318,19 +323,20 @@ int FaceTracker::compute_optflow(
   // Points in the previous frame at which the optical flow will be computed.
   std::vector<cv::Point2f> prev_points;
 
-  // The termination criteria of the iterative search algorithm.
-  using cv::TermCriteria;
-  static const TermCriteria term_crit(TermCriteria::COUNT + TermCriteria::EPS,
-                                      20, 0.03);
   if (run_gftt) {
     // Run GFTT on prev_frame for specified ROI.
     cv::goodFeaturesToTrack(prev_gray, prev_points,
-                            FaceTracker::kGfttMaxCorners, 0.01, 10, mask);
+                            cfg_gftt.max_n, cfg_gftt.quality_level,
+                            cfg_gftt.min_distance, mask);
     if (!prev_points.empty()) {
       // Refine corner locations.
-      static const cv::Size subpixel_win_size(10, 10);
+      const auto& term_crit = cfg_subpixel.term_crit;
+      const cv::Size subpixel_win_size(cfg_subpixel.window_size,
+                                       cfg_subpixel.window_size);
+      const cv::Size zero_zone_size(cfg_subpixel.zero_zone_size,
+                                    cfg_subpixel.zero_zone_size);
       cv::cornerSubPix(prev_gray, prev_points, subpixel_win_size,
-                       cv::Size(-1,-1), term_crit);
+                       zero_zone_size, term_crit);
     }
   }
 
@@ -354,9 +360,10 @@ int FaceTracker::compute_optflow(
   std::vector<cv::Point2f> curr_points;
   std::vector<uchar> status;
   std::vector<float> error;
-  static const cv::Size win_size(31, 31);
+  const cv::Size win_size(cfg_lk.window_size, cfg_lk.window_size);
   cv::calcOpticalFlowPyrLK(prev_gray, curr_gray, prev_points, curr_points,
-                           status, error, win_size, 3, term_crit);
+                           status, error, win_size, cfg_lk.max_level,
+                           cfg_lk.term_crit);
 
   // Save the result.
   const std::vector<cv::Point2f>::size_type num_curr_points =
@@ -370,7 +377,8 @@ int FaceTracker::compute_optflow(
       // Flow is found.
       optflow.next_point = curr_points[i];
       cv::Point2d diff = optflow.next_point - optflow.prev_point;
-      double optflow_distance_thres = prev_frame.cols * 0.04;
+      const double optflow_distance_thres =
+          prev_frame.cols * cfg_lk.coeff_thres_len;
       if (cv::norm(diff) > optflow_distance_thres) {
         optflow.found = false;
       } else {
