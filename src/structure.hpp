@@ -74,6 +74,10 @@ struct Configuration {
     int zero_zone_size;
     // Termination criteria for iterative search.
     cv::TermCriteria term_crit;
+
+    SubpixelSection() {
+      this->term_crit.type = cv::TermCriteria::COUNT + cv::TermCriteria::EPS;
+    }
   };
   struct LucasKanadeSection {
     // Size of the search window at each pyramid level.
@@ -84,6 +88,10 @@ struct Configuration {
     cv::TermCriteria term_crit;
     // Coefficient for threshold on optical flow length.
     double coeff_thres_len;
+
+    LucasKanadeSection() {
+      this->term_crit.type = cv::TermCriteria::COUNT + cv::TermCriteria::EPS;
+    }
   };
   struct AssociationSection {
     // Threshold for probability used during association.
