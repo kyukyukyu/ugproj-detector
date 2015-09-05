@@ -12,8 +12,7 @@ class FaceDetector {
     FaceDetector(cv::CascadeClassifier& cascade,
                  const Configuration::DetectionSection& cfg) :
         cascade(cascade), cfg_(cfg) {};
-    void detectFaces(const cv::Mat& frame, std::vector<cv::Rect>& rects,
-                     const float scale);
+    void detectFaces(const cv::Mat& frame, std::vector<cv::Rect>& rects);
   private:
     cv::CascadeClassifier& cascade;
     const Configuration::DetectionSection& cfg_;

@@ -72,12 +72,14 @@ bool parse_args(int argc, const char** argv, ugproj::Configuration* cfg) {
        "path to output directory.")
     ;
     config_options.add_options()
+      ("scan.frame_size",
+       po::value<cv::Size>(&cfg->scan.frame_size)
+           ->default_value(cv::Size(-1, -1)),
+       "frame size at which video will be scanned. "
+       "default value is the original frame size.")
       ("scan.target_fps",
        po::value<double>(&cfg->scan.target_fps)->default_value(10.0),
        "fps at which video will be scanned.")
-      ("scan.detection_scale",
-       po::value<double>(&cfg->scan.detection_scale)->default_value(1.0),
-       "scale at which image will be transformed during detection.")
 
       ("detection.cascade_classifier_filepath",
        po::value<std::string>()->required(),
@@ -240,6 +242,29 @@ template <> void boost::program_options::validate(
   int n1, n2, n3;
   if (std::sscanf(s.c_str(), "%3u , %3u , %3u", &n1, &n2, &n3) == 3) {
     v = boost::any(cv::Scalar(n1, n2, n3));
+  } else {
+    throw po::validation_error::invalid_option_value;
+  }
+}
+
+// Validates if input for program options is in the form of '1280x720' and
+// converts it to cv::Size object.
+template <> void boost::program_options::validate(
+    boost::any& v,
+    const std::vector<std::string>& values,
+    cv::Size*,
+    long) {
+  namespace po = boost::program_options;
+
+  // No previous assignment allowed.
+  po::validators::check_first_occurrence(v);
+  // No more than one string allowed.
+  const std::string& s = po::validators::get_single_string(values);
+
+  // Scan two numbers from the string and create cv::Size object.
+  int n1, n2;
+  if (std::sscanf(s.c_str(), "%u x %u", &n1, &n2) == 2) {
+    v = boost::any(cv::Size(n1, n2));
   } else {
     throw po::validation_error::invalid_option_value;
   }

@@ -42,10 +42,11 @@ enum AssociationMethod {
 
 struct Configuration {
   struct ScanSection {
+    // Frame size at which video will be scanned. Default value is (-1, -1),
+    // which represents the original frame size.
+    cv::Size frame_size;
     // Fps at which video will be scanned.
     double target_fps;
-    // Scale at which image will be transformed during detection.
-    double detection_scale;
   };
   struct DetectionSection {
     // Lower bound for skin color range in YCrCb.

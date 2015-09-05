@@ -39,6 +39,8 @@ class FaceTracker {
     int write_result(
         const temp_idx_t curr_index,
         const std::vector<unsigned long>& tracked_positions,
+        const double sx,
+        const double sy,
         const cv::Mat& curr_frame,
         const FaceCandidateList& curr_candidates,
         const std::vector<SparseOptflow>& curr_optflows);

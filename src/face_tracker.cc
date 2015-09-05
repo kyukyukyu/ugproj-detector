@@ -40,18 +40,33 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
 
   cv::CascadeClassifier& cascade = this->input_->cascade();
   cv::VideoCapture& video = this->input_->video();
+  FaceDetector detector(cascade, this->cfg_->detection);
+
+  // Retrieve properties of input video.
   VideoProperties video_props;
   this->get_properties(&video, &video_props);
-  FaceDetector detector(cascade, this->cfg_->detection);
+  const cv::Size orig_frame_size =
+      cv::Size(video_props.frame_width, video_props.frame_height);
 
   ret = this->writer_->open_video_file(
       this->kVideoKey,
       this->kVideoFilename,
       this->cfg_->scan.target_fps,
-      cv::Size(video_props.frame_width, video_props.frame_height));
+      orig_frame_size);
   if (ret) {
     return ret;
   }
+
+  // Compute scale factor for frame width and height by comparing frame
+  // size in configuration and the original frame size.
+  const cv::Size& cfg_frame_size = this->cfg_->scan.frame_size;
+  const cv::Size& scan_frame_size =
+      (cfg_frame_size.width > 0 && cfg_frame_size.height > 0) ?
+      cfg_frame_size : orig_frame_size;
+  const double sx =
+      (double) video_props.frame_width / (double) scan_frame_size.width;
+  const double sy =
+      (double) video_props.frame_height / (double) scan_frame_size.height;
 
   // The position of current grabbed frame.
   unsigned long pos = 0;
@@ -60,9 +75,11 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
   // The last index number of tracking with at lease one detected face
   // before current one.
   temp_idx_t last_index_detected;
-  // The matrix representing current grabbed frame.
+  // The matrix representing resized current grabbed frame.
   cv::Mat curr_frame;
-  // The matrix representing previous grabbed frame.
+  // The matrix representing original current grabbed frame.
+  cv::Mat curr_frame_orig;
+  // The matrix representing resized previous grabbed frame.
   cv::Mat prev_frame;
   // The list of face candidates detected in current grabbed frame.
   FaceCandidateList* curr_candidates = NULL;
@@ -86,12 +103,15 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
         0.0 : std::fmod(pos, video_props.fps / target_fps);
     static const double epsilon = std::numeric_limits<double>::epsilon();
     if (mod - 1.0 <= -epsilon) {
-      video.retrieve(curr_frame);
-      if (curr_frame.empty()) {
+      video.retrieve(curr_frame_orig);
+      if (curr_frame_orig.empty()) {
         // Something went wrong on retrieving frame.
         ret = 1;
         break;
       }
+      cv::resize(curr_frame_orig, curr_frame, scan_frame_size,
+                 0, 0,              // dsize is used instead of fx, fy.
+                 cv::INTER_AREA);   // Preferred method for image decimation.
 
       // `tracked_positions->at(curr_index)` becomes `pos`
       tracked_positions->push_back(pos);
@@ -110,7 +130,7 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
 
       // Write tracking result of current grabbed frame to file(s).
       ret = this->write_result(curr_index, *tracked_positions,
-                               curr_frame,
+                               sx, sy, curr_frame_orig,
                                *curr_candidates, *curr_optflows);
       if (ret != 0) {
         break;
@@ -195,6 +215,8 @@ int FaceTracker::track_frame(
 int FaceTracker::write_result(
     const temp_idx_t curr_index,
     const std::vector<unsigned long>& tracked_positions,
+    const double sx,
+    const double sy,
     const cv::Mat& curr_frame,
     const FaceCandidateList& curr_candidates,
     const std::vector<SparseOptflow>& curr_optflows) {
@@ -220,7 +242,9 @@ int FaceTracker::write_result(
   for (FaceCandidateList::const_iterator it = curr_candidates.cbegin();
        it != curr_candidates.cend();
        ++it) {
-    const cv::Rect& face = it->rect;
+    const cv::Rect& orig_rect = it->rect;
+    const cv::Rect face(orig_rect.x * sx, orig_rect.y * sy,
+                        orig_rect.width * sx, orig_rect.height * sy);
     const auto face_id = it->faceId;
     const auto fitted = it->fitted;
     const cv::Scalar& color =
@@ -241,9 +265,15 @@ int FaceTracker::write_result(
        ++it) {
     const SparseOptflow& optflow = *it;
     const cv::Scalar color = optflow.found ? color_green : color_red;
-    cv::circle(image, optflow.prev_point, 3, color, -1);
+    const cv::Point2f& orig_prev_point = optflow.prev_point;
+    const cv::Point2f prev_point(orig_prev_point.x * sx,
+                                 orig_prev_point.y * sy);
+    cv::circle(image, prev_point, 3, color, -1);
     if (optflow.found) {
-      cv::line(image, optflow.prev_point, optflow.next_point, color);
+      const cv::Point2f& orig_next_point = optflow.next_point;
+      const cv::Point2f next_point(orig_next_point.x * sx,
+                                   orig_next_point.y * sy);
+      cv::line(image, prev_point, next_point, color);
     }
   }
 
@@ -261,7 +291,7 @@ int FaceTracker::detect_faces(const temp_idx_t curr_index,
                               FaceDetector* detector,
                               FaceCandidateList* curr_candidates) {
   std::vector<cv::Rect> rects;
-  detector->detectFaces(curr_frame, rects, this->cfg_->scan.detection_scale);
+  detector->detectFaces(curr_frame, rects);
   for (std::vector<cv::Rect>::const_iterator it = rects.cbegin();
        it != rects.cend();
        ++it) {
