@@ -53,6 +53,12 @@ class FaceTracker {
                         const FaceCandidateList& prev_candidates,
                         const std::vector<SparseOptflow>& prev_optflows,
                         std::vector<SparseOptflow>* curr_optflows);
+    // Returns the list of points which will be used as input for Lucas-Kanade
+    // algorithm.
+    std::vector<cv::Point2f> prepare_points_for_lk(
+        const cv::Mat& gray_frame,
+        const FaceCandidateList& candidates,
+        const std::vector<SparseOptflow>& optflows);
     // Computes ROI used in GFTT for current frame with given set of face
     // candidates and optical flow from the previous frame. Returns true if
     // mask is set for any region in the frame. Otherwise, returns false.

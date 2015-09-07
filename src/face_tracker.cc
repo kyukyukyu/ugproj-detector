@@ -310,52 +310,16 @@ int FaceTracker::compute_optflow(
     std::vector<SparseOptflow>* curr_optflows) {
   std::printf("compute_optflow\n");
   // Prepare sections of configuration object.
-  const auto& cfg_gftt = this->cfg_->gftt;
-  const auto& cfg_subpixel = this->cfg_->subpixel;
   const auto& cfg_lk = this->cfg_->lucas_kanade;
-
-  // Compute mask for GFTT.
-  cv::Mat mask;
-  bool run_gftt = this->compute_roi_gftt(prev_frame.size(),
-                                         prev_candidates,
-                                         prev_optflows,
-                                         &mask);
 
   // Convert RGB images to grayscale images.
   cv::Mat prev_gray;
   cv::Mat curr_gray;
   cvtColor(prev_frame, prev_gray, CV_BGR2GRAY);
   cvtColor(curr_frame, curr_gray, CV_BGR2GRAY);
-
   // Points in the previous frame at which the optical flow will be computed.
-  std::vector<cv::Point2f> prev_points;
-
-  if (run_gftt) {
-    // Run GFTT on prev_frame for specified ROI.
-    cv::goodFeaturesToTrack(prev_gray, prev_points,
-                            cfg_gftt.max_n, cfg_gftt.quality_level,
-                            cfg_gftt.min_distance, mask);
-    if (!prev_points.empty()) {
-      // Refine corner locations.
-      const auto& term_crit = cfg_subpixel.term_crit;
-      const cv::Size subpixel_win_size(cfg_subpixel.window_size,
-                                       cfg_subpixel.window_size);
-      const cv::Size zero_zone_size(cfg_subpixel.zero_zone_size,
-                                    cfg_subpixel.zero_zone_size);
-      cv::cornerSubPix(prev_gray, prev_points, subpixel_win_size,
-                       zero_zone_size, term_crit);
-    }
-  }
-
-  // Append destination points of optical flows computed for previous frame.
-  for (std::vector<SparseOptflow>::const_iterator it = prev_optflows.cbegin();
-       it != prev_optflows.cend();
-       ++it) {
-    const SparseOptflow& optflow = *it;
-    if (optflow.found) {
-      prev_points.push_back(optflow.next_point);
-    }
-  }
+  std::vector<cv::Point2f> prev_points =
+      this->prepare_points_for_lk(prev_gray, prev_candidates, prev_optflows);
 
   if (prev_points.empty()) {
     curr_optflows->clear();
@@ -398,6 +362,50 @@ int FaceTracker::compute_optflow(
   }
 
   return 0;
+}
+
+std::vector<cv::Point2f> FaceTracker::prepare_points_for_lk(
+    const cv::Mat& gray_frame,
+    const FaceCandidateList& candidates,
+    const std::vector<SparseOptflow>& optflows) {
+  // Points in the frame at which optical flows will be computed.
+  std::vector<cv::Point2f> points;
+  // Configuration section objects.
+  const auto& cfg_gftt = this->cfg_->gftt;
+  const auto& cfg_subpixel = this->cfg_->subpixel;
+
+  // Compute mask for GFTT.
+  cv::Mat mask;
+  bool run_gftt = this->compute_roi_gftt(gray_frame.size(),
+                                         candidates,
+                                         optflows,
+                                         &mask);
+  // Run GFTT if needed.
+  if (run_gftt) {
+    // Run GFTT on prev_frame for specified ROI.
+    cv::goodFeaturesToTrack(gray_frame, points,
+                            cfg_gftt.max_n, cfg_gftt.quality_level,
+                            cfg_gftt.min_distance, mask);
+    if (!points.empty()) {
+      // Refine corner locations.
+      const auto& term_crit = cfg_subpixel.term_crit;
+      const cv::Size subpixel_win_size(cfg_subpixel.window_size,
+                                       cfg_subpixel.window_size);
+      const cv::Size zero_zone_size(cfg_subpixel.zero_zone_size,
+                                    cfg_subpixel.zero_zone_size);
+      cv::cornerSubPix(gray_frame, points, subpixel_win_size,
+                       zero_zone_size, term_crit);
+    }
+  }
+
+  // Append destination points of optical flows computed for previous frame.
+  for (const SparseOptflow& optflow : optflows) {
+    if (optflow.found) {
+      points.push_back(optflow.next_point);
+    }
+  }
+
+  return points;
 }
 
 bool FaceTracker::compute_roi_gftt(
