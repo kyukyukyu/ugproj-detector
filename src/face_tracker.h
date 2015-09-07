@@ -66,6 +66,12 @@ class FaceTracker {
                           const FaceCandidateList& candidates,
                           const std::vector<SparseOptflow>& optflows,
                           cv::Mat* roi);
+    // Runs Lucas-Kanade algorithm and populates the list of optical flows with
+    // the result. Each optical flow is represented in SparseOptflow type.
+    void run_lk(const cv::Mat& prev_gray,
+                const cv::Mat& curr_gray,
+                const std::vector<cv::Point2f> points,
+                std::vector<SparseOptflow>* optflows);
     // Draws tracklet for a labeled face and writes to a file. The name of file
     // will be formatted with format string `face_%3d.png` with interpolation
     // of face ID. An instance of labeled face and the list of tracked frame

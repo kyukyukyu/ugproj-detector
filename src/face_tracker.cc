@@ -309,8 +309,6 @@ int FaceTracker::compute_optflow(
     const std::vector<SparseOptflow>& prev_optflows,
     std::vector<SparseOptflow>* curr_optflows) {
   std::printf("compute_optflow\n");
-  // Prepare sections of configuration object.
-  const auto& cfg_lk = this->cfg_->lucas_kanade;
 
   // Convert RGB images to grayscale images.
   cv::Mat prev_gray;
@@ -327,40 +325,7 @@ int FaceTracker::compute_optflow(
   }
 
   std::printf("Lucas Kanade\n");
-  // Compute Lucas-Kanade sparse optical flow.
-  std::vector<cv::Point2f> curr_points;
-  std::vector<uchar> status;
-  std::vector<float> error;
-  const cv::Size win_size(cfg_lk.window_size, cfg_lk.window_size);
-  cv::calcOpticalFlowPyrLK(prev_gray, curr_gray, prev_points, curr_points,
-                           status, error, win_size, cfg_lk.max_level,
-                           cfg_lk.term_crit);
-
-  // Save the result.
-  const std::vector<cv::Point2f>::size_type num_curr_points =
-      curr_points.size();
-  curr_optflows->clear();
-  curr_optflows->reserve(num_curr_points);
-  for (std::vector<cv::Point2f>::size_type i = 0; i < num_curr_points; ++i) {
-    SparseOptflow optflow;
-    optflow.prev_point = prev_points[i];
-    if (status[i] == 1) {
-      // Flow is found.
-      optflow.next_point = curr_points[i];
-      cv::Point2d diff = optflow.next_point - optflow.prev_point;
-      const double optflow_distance_thres =
-          prev_frame.cols * cfg_lk.coeff_thres_len;
-      if (cv::norm(diff) > optflow_distance_thres) {
-        optflow.found = false;
-      } else {
-        optflow.found = true;
-      }
-    } else {
-      optflow.found = false;
-    }
-    curr_optflows->push_back(optflow);
-  }
-
+  this->run_lk(prev_gray, curr_gray, prev_points, curr_optflows);
   return 0;
 }
 
@@ -438,6 +403,43 @@ bool FaceTracker::compute_roi_gftt(
     }
   }
   return run_gftt;
+}
+
+void FaceTracker::run_lk(const cv::Mat& prev_gray,
+                         const cv::Mat& curr_gray,
+                         const std::vector<cv::Point2f> points,
+                         std::vector<SparseOptflow>* optflows) {
+  // Configuration section object.
+  const auto& cfg_lk = this->cfg_->lucas_kanade;
+  // Compute Lucas-Kanade sparse optical flow.
+  std::vector<cv::Point2f> curr_points;
+  std::vector<uchar> status;
+  std::vector<float> error;
+  const cv::Size win_size(cfg_lk.window_size, cfg_lk.window_size);
+  cv::calcOpticalFlowPyrLK(prev_gray, curr_gray, points, curr_points,
+                           status, error, win_size, cfg_lk.max_level,
+                           cfg_lk.term_crit);
+
+  // Populate optflows with the result.
+  const std::vector<cv::Point2f>::size_type num_curr_points =
+      curr_points.size();
+  optflows->clear();
+  optflows->reserve(num_curr_points);
+  for (std::vector<cv::Point2f>::size_type i = 0; i < num_curr_points; ++i) {
+    SparseOptflow optflow;
+    optflow.prev_point = points[i];
+    if (status[i] == 1) {
+      // Flow is found.
+      optflow.next_point = curr_points[i];
+      cv::Point2d diff = optflow.next_point - optflow.prev_point;
+      const double optflow_distance_thres =
+          prev_gray.cols * cfg_lk.coeff_thres_len;
+      optflow.found = cv::norm(diff) <= optflow_distance_thres;
+    } else {
+      optflow.found = false;
+    }
+    optflows->push_back(optflow);
+  }
 }
 
 int FaceTracker::write_tracklet(
