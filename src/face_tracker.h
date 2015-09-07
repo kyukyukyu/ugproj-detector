@@ -1,6 +1,5 @@
 #ifndef UGPROJ_FACETRACKER_H_
 #define UGPROJ_FACETRACKER_H_
-#define UGPROJ_SUPPRESS_CELIU
 
 #include "detector/detector.hpp"
 #include "file_io.h"

@@ -1,4 +1,3 @@
-#define UGPROJ_SUPPRESS_CELIU
 #include "associator/associator.hpp"
 #include "face_tracker.h"
 

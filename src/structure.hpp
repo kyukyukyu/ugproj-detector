@@ -1,10 +1,6 @@
 #ifndef UGPROJ_STRUCTURE_HEADER
 #define UGPROJ_STRUCTURE_HEADER
 
-#ifndef UGPROJ_SUPPRESS_CELIU
-#include "celiu-optflow/optical_flow.h"
-#endif
-
 #include <string>
 #include <utility>
 #include <vector>
@@ -17,10 +13,6 @@ class FaceCandidate;
 
 typedef unsigned long temp_idx_t;
 typedef unsigned int face_id_t;
-
-#ifndef UGPROJ_SUPPRESS_CELIU
-typedef opticalflow::MCImageDoubleX OptFlowArray;
-#endif
 
 typedef std::vector<FaceCandidate> FaceCandidateList;
 
