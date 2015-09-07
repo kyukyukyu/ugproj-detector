@@ -6,6 +6,7 @@
 #endif
 
 #include <string>
+#include <utility>
 #include <vector>
 #include <opencv2/opencv.hpp>
 
@@ -20,7 +21,7 @@ typedef unsigned int face_id_t;
 typedef opticalflow::MCImageDoubleX OptFlowArray;
 #endif
 
-typedef std::vector<FaceCandidate*> FaceCandidateList;
+typedef std::vector<FaceCandidate> FaceCandidateList;
 
 // Represents single sparse optflow computed between two images.
 struct SparseOptflow {
@@ -54,10 +55,19 @@ class FaceCandidate {
     cv::Rect rect;
     cv::Mat image;
     face_id_t faceId;
+    int fitted = 0;
 
     FaceCandidate(const temp_idx_t frameIndex, const cv::Rect& rect,
-                  cv::Mat& image) :
+                  const cv::Mat& image) :
         frameIndex(frameIndex), rect(rect), image(image), faceId(0) {};
+    FaceCandidate(const FaceCandidate& fc) {
+      this->frameIndex = fc.frameIndex;
+      this->rect = fc.rect;
+      fc.image.copyTo(this->image);
+      this->faceId = fc.faceId;
+      this->fitted = fc.fitted;
+    }
+    cv::Mat resized_image(int size) const;
 };
 
 class Face {
@@ -68,8 +78,12 @@ class Face {
     typedef face_id_t id_type;
     const id_type id;
     Face(id_type id) : id(id) {};
-    Face(id_type id, FaceCandidate& candidate);
-    void addCandidate(FaceCandidate& candidate);
+    Face(id_type id, const FaceCandidate& candidate);
+    void addCandidate(const FaceCandidate& candidate);
+    std::pair<FaceCandidateList::const_iterator,
+              FaceCandidateList::const_iterator> candidate_iterators() const {
+      return {this->candidates.cbegin(), this->candidates.cend()};
+    }
 };
 
 } // ugproj

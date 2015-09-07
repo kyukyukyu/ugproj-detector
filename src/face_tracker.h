@@ -13,7 +13,7 @@ class FaceTracker {
   public:
     FaceTracker();
     int set_input(FileInput* input);
-    int set_writer(const FileWriter* writer);
+    int set_writer(FileWriter* writer);
     int set_args(const Arguments* args);
     int track(std::vector<unsigned long>* tracked_positions);
 
@@ -25,6 +25,8 @@ class FaceTracker {
       int frame_height;
     };
     static const int kGfttMaxCorners = 100;
+    static const char* kVideoKey;
+    static const char* kVideoFilename;
     void get_properties(cv::VideoCapture* video, VideoProperties* props);
     int track_frame(
         const temp_idx_t curr_index,
@@ -35,7 +37,7 @@ class FaceTracker {
         FaceDetector* detector,
       FaceCandidateList* curr_candidates,
       std::vector<SparseOptflow>* curr_optflows);
-    int write_frame(
+    int write_result(
         const temp_idx_t curr_index,
         const std::vector<unsigned long>& tracked_positions,
         const cv::Mat& prev_frame,
@@ -51,8 +53,14 @@ class FaceTracker {
                         const FaceCandidateList& prev_candidates,
                         const std::vector<SparseOptflow>& prev_optflows,
                         std::vector<SparseOptflow>* curr_optflows);
+    // Draws tracklet for a labeled face and writes to a file. The name of file
+    // will be formatted with format string `face_%3d.png` with interpolation
+    // of face ID. An instance of labeled face and the list of tracked frame
+    // positions should be given.
+    int write_tracklet(const Face& f,
+                       const std::vector<unsigned long>& tracked_positions);
     FileInput* input_;
-    const FileWriter* writer_;
+    FileWriter* writer_;
     const Arguments* args_;
     // List of labeled faces.
     std::vector<Face> labeled_faces_;

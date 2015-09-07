@@ -137,7 +137,7 @@ int main(int argc, const char** argv) {
              ++it) {
             Mat cddImage(frame, *it);
             // dynamically allocate cdd to handle multiple candidates
-            FaceCandidate* cdd = new FaceCandidate(index, *it, cddImage);
+            FaceCandidate cdd(index, *it, cddImage);
             currCandidates->push_back(cdd);
         }
         printf("Found %lu faces.\n", currCandidates->size());
@@ -159,8 +159,8 @@ add_all:
                  it != currCandidates->end();
                  ++it) {
                 Face::id_type faceId = faces.size() + 1;
-                (*it)->faceId = faceId;
-                faces.push_back(Face(faceId, **it));
+                it->faceId = faceId;
+                faces.push_back(Face(faceId, *it));
             }
         } else {
             printf("Performing association for faces... ");
@@ -221,8 +221,8 @@ add_all:
         for (FaceAssociator::fc_v::const_iterator it = currCandidates->begin();
              it != currCandidates->end();
              ++it) {
-            FaceCandidate* candidate = *it;
-            drawRect(frame, candidate->faceId, candidate->rect);
+            const FaceCandidate& candidate = *it;
+            drawRect(frame, candidate.faceId, candidate.rect);
         }
         printf("done.\n");
 
