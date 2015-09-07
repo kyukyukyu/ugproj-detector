@@ -315,33 +315,11 @@ int FaceTracker::compute_optflow(
   const auto& cfg_lk = this->cfg_->lucas_kanade;
 
   // Compute mask for GFTT.
-  cv::Mat mask(prev_frame.size(), CV_8UC1, cv::Scalar(0));
-  bool run_gftt = false;
-  for (FaceCandidateList::const_iterator it_a = prev_candidates.cbegin();
-       it_a != prev_candidates.cend();
-       ++it_a) {
-    const FaceCandidate& candidate = *it_a;
-    const cv::Rect& rect = candidate.rect;
-    std::vector<SparseOptflow>::const_iterator it_b;
-    bool set_mask = true;
-    unsigned int n_optflows = 0;
-    const unsigned int thres_n_optflows = rect.width / 10;
-
-    for (it_b = prev_optflows.cbegin(); it_b != prev_optflows.cend(); ++it_b) {
-      const SparseOptflow& optflow = *it_b;
-      if (rect.contains(optflow.next_point)) {
-        ++n_optflows;
-        if (n_optflows >= thres_n_optflows) {
-          set_mask = false;
-          break;
-        }
-      }
-    }
-    if (set_mask) {
-      mask(rect) = cv::Scalar(1);
-      run_gftt = true;
-    }
-  }
+  cv::Mat mask;
+  bool run_gftt = this->compute_roi_gftt(prev_frame.size(),
+                                         prev_candidates,
+                                         prev_optflows,
+                                         &mask);
 
   // Convert RGB images to grayscale images.
   cv::Mat prev_gray;
@@ -420,6 +398,38 @@ int FaceTracker::compute_optflow(
   }
 
   return 0;
+}
+
+bool FaceTracker::compute_roi_gftt(
+    const cv::Size& frame_size,
+    const FaceCandidateList& candidates,
+    const std::vector<SparseOptflow>& optflows,
+    cv::Mat* roi) {
+  roi->create(frame_size, CV_8UC1);
+  roi->setTo(cv::Scalar(0));
+  bool run_gftt = false;
+  for (const FaceCandidate& candidate : candidates) {
+    const cv::Rect& rect = candidate.rect;
+    std::vector<SparseOptflow>::const_iterator it_b;
+    bool set_mask = true;
+    unsigned int n_optflows = 0;
+    const unsigned int thres_n_optflows = rect.width / 10;
+
+    for (const SparseOptflow& optflow : optflows) {
+      if (rect.contains(optflow.next_point)) {
+        ++n_optflows;
+        if (n_optflows >= thres_n_optflows) {
+          set_mask = false;
+          break;
+        }
+      }
+    }
+    if (set_mask) {
+      (*roi)(rect) = cv::Scalar(1);
+      run_gftt = true;
+    }
+  }
+  return run_gftt;
 }
 
 int FaceTracker::write_tracklet(
