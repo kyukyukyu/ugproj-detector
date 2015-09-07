@@ -1,9 +1,9 @@
 #ifndef UGPROJ_FACETRACKER_H_
 #define UGPROJ_FACETRACKER_H_
 
-#include "detector/detector.hpp"
+#include "detector/detector.h"
 #include "file_io.h"
-#include "structure.hpp"
+#include "structure.h"
 #include <vector>
 
 namespace ugproj {

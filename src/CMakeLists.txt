@@ -1,10 +1,10 @@
 # Register source files
-list(APPEND project_SRCS "structure.cpp")
-list(APPEND project_SRCS "detector/detector.cpp")
-list(APPEND project_SRCS "associator/associator.cpp")
+list(APPEND project_SRCS "structure.cc")
+list(APPEND project_SRCS "detector/detector.cc")
+list(APPEND project_SRCS "associator/associator.cc")
 list(APPEND project_SRCS "file_io.cc")
 list(APPEND project_SRCS "face_tracker.cc")
-list(APPEND project_SRCS "lucas_kanade.cc")
+list(APPEND project_SRCS "main.cc")
 
 set(project_LIBS ${Boost_LIBRARIES} ${OpenCV_LIBS})
 set(project_BIN ${PROJECT_NAME})

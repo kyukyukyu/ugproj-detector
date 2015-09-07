@@ -1,4 +1,4 @@
-#include "structure.hpp"
+#include "structure.h"
 
 using namespace ugproj;
 

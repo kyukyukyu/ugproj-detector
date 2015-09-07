@@ -4,7 +4,7 @@
 #define UGPROJ_ASSOCIATOR_SIFT_TRIAL_COUNT 10
 #define UGPROJ_ASSOCIATOR_SIFT_SCALE_THRESHOLD 1.25
 
-#include "../structure.hpp"
+#include "../structure.h"
 
 #include <boost/optional.hpp>
 #include <opencv2/opencv.hpp>

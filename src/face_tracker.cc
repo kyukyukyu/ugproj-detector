@@ -1,4 +1,4 @@
-#include "associator/associator.hpp"
+#include "associator/associator.h"
 #include "face_tracker.h"
 
 #include <cstdio>

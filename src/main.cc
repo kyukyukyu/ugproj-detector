@@ -1,6 +1,6 @@
 #include "face_tracker.h"
 #include "file_io.h"
-#include "structure.hpp"
+#include "structure.h"
 
 #include <cstdio>
 #include <string>

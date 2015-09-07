@@ -1,7 +1,7 @@
 #ifndef UGPROJ_FILEIO_H_
 #define UGPROJ_FILEIO_H_
 
-#include "structure.hpp"
+#include "structure.h"
 
 #include <string>
 #include <unordered_map>

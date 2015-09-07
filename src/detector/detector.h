@@ -3,7 +3,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <vector>
-#include "../structure.hpp"
+#include "../structure.h"
 
 namespace ugproj {
 
