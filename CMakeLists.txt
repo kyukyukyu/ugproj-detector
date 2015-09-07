@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(UndergraduateProj)
+project(ugproj)
 
 # Project Output Paths
 SET (MAINFOLDER ${PROJECT_SOURCE_DIR})
