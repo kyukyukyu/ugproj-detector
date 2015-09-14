@@ -82,8 +82,6 @@ class FaceTracker {
     FileInput* input_;
     FileWriter* writer_;
     const Configuration* cfg_;
-    // List of labeled faces.
-    std::vector<Face> labeled_faces_;
 };
 
 }  // namespace ugproj
