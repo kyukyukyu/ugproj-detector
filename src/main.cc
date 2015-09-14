@@ -1,3 +1,4 @@
+#include "clusterer/clusterer.h"
 #include "face_tracker.h"
 #include "file_io.h"
 #include "structure.h"
@@ -40,6 +41,22 @@ int main(int argc, const char** argv) {
   tracker.set_writer(&writer);
   tracker.set_cfg(&cfg);
   ret = tracker.track(&tracked_positions, &labeled_faces);
+  if (ret != 0) {
+    return ret;
+  }
+
+  // TODO: Add some code that picks representative face from each face
+  // tracklet, and does dimensionality reduction using PCA.
+  //
+  // Matrix that includes the result of PCA. Each row represents the
+  // representative face of a tracklet.
+  cv::Mat repr_faces_reduced;
+  // List of cluster IDs for face tracklets.
+  std::vector<ugproj::face_id_t> cluster_ids;
+  // Clusterer object for representative faces of tracklets.
+  ugproj::FaceClusterer clusterer(cfg);
+  clusterer.set_writer(&writer);
+  ret = clusterer.do_clustering(repr_faces_reduced, &cluster_ids);
   if (ret != 0) {
     return ret;
   }
