@@ -1,10 +1,9 @@
 #ifndef UGPROJ_FACETRACKER_H_
 #define UGPROJ_FACETRACKER_H_
-#define UGPROJ_SUPPRESS_CELIU
 
-#include "detector/detector.hpp"
+#include "detector/detector.h"
 #include "file_io.h"
-#include "structure.hpp"
+#include "structure.h"
 #include <vector>
 
 namespace ugproj {
@@ -13,8 +12,8 @@ class FaceTracker {
   public:
     FaceTracker();
     int set_input(FileInput* input);
-    int set_writer(const FileWriter* writer);
-    int set_args(const Arguments* args);
+    int set_writer(FileWriter* writer);
+    int set_cfg(const Configuration* cfg);
     int track(std::vector<unsigned long>* tracked_positions);
 
   private:
@@ -24,7 +23,8 @@ class FaceTracker {
       int frame_width;
       int frame_height;
     };
-    static const int kGfttMaxCorners = 100;
+    static const char* kVideoKey;
+    static const char* kVideoFilename;
     void get_properties(cv::VideoCapture* video, VideoProperties* props);
     int track_frame(
         const temp_idx_t curr_index,
@@ -35,10 +35,11 @@ class FaceTracker {
         FaceDetector* detector,
       FaceCandidateList* curr_candidates,
       std::vector<SparseOptflow>* curr_optflows);
-    int write_frame(
+    int write_result(
         const temp_idx_t curr_index,
         const std::vector<unsigned long>& tracked_positions,
-        const cv::Mat& prev_frame,
+        const double sx,
+        const double sy,
         const cv::Mat& curr_frame,
         const FaceCandidateList& curr_candidates,
         const std::vector<SparseOptflow>& curr_optflows);
@@ -51,9 +52,34 @@ class FaceTracker {
                         const FaceCandidateList& prev_candidates,
                         const std::vector<SparseOptflow>& prev_optflows,
                         std::vector<SparseOptflow>* curr_optflows);
+    // Returns the list of points which will be used as input for Lucas-Kanade
+    // algorithm.
+    std::vector<cv::Point2f> prepare_points_for_lk(
+        const cv::Mat& gray_frame,
+        const FaceCandidateList& candidates,
+        const std::vector<SparseOptflow>& optflows);
+    // Computes ROI used in GFTT for current frame with given set of face
+    // candidates and optical flow from the previous frame. Returns true if
+    // mask is set for any region in the frame. Otherwise, returns false.
+    bool compute_roi_gftt(const cv::Size& frame_size,
+                          const FaceCandidateList& candidates,
+                          const std::vector<SparseOptflow>& optflows,
+                          cv::Mat* roi);
+    // Runs Lucas-Kanade algorithm and populates the list of optical flows with
+    // the result. Each optical flow is represented in SparseOptflow type.
+    void run_lk(const cv::Mat& prev_gray,
+                const cv::Mat& curr_gray,
+                const std::vector<cv::Point2f> points,
+                std::vector<SparseOptflow>* optflows);
+    // Draws tracklet for a labeled face and writes to a file. The name of file
+    // will be formatted with format string `face_%3d.png` with interpolation
+    // of face ID. An instance of labeled face and the list of tracked frame
+    // positions should be given.
+    int write_tracklet(const Face& f,
+                       const std::vector<unsigned long>& tracked_positions);
     FileInput* input_;
-    const FileWriter* writer_;
-    const Arguments* args_;
+    FileWriter* writer_;
+    const Configuration* cfg_;
     // List of labeled faces.
     std::vector<Face> labeled_faces_;
 };

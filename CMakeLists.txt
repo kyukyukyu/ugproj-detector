@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(UndergraduateProj)
+project(ugproj)
 
 # Project Output Paths
 SET (MAINFOLDER ${PROJECT_SOURCE_DIR})
@@ -11,7 +11,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/share/cmak
 
 find_package(OpenCV REQUIRED)
 find_package(Boost
-    COMPONENTS system filesystem program_options math_tr1
+    COMPONENTS filesystem math_tr1 program_options system
     REQUIRED)
 find_package(Eigen REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
