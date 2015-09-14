@@ -33,6 +33,7 @@ int main(int argc, const char** argv) {
 
   // The list of tracked frame positions.
   std::vector<unsigned long> tracked_positions;
+  // The list of labeled faces using face tracker.
   std::vector<ugproj::Face> labeled_faces;
   ugproj::FaceTracker tracker;
   tracker.set_input(&input);
