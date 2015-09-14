@@ -168,6 +168,10 @@ bool parse_args(int argc, const char** argv, ugproj::Configuration* cfg) {
            ->default_value(1.5),
        "coefficient for threshold on the aspect ratio of each fit box. "
        "should be greater than or equal to 1.0.")
+
+      ("clustering.k",
+       po::value<int>(&cfg->clustering.k)->required(),
+       "the number of clusters to be found.")
     ;
 
     po::options_description visible_options("Allowed options");
