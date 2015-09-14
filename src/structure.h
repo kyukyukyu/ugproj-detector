@@ -106,6 +106,10 @@ struct Configuration {
   struct ClusteringSection {
     // The number of clusters to be found.
     int k;
+    // Termination criteria for k-means.
+    cv::TermCriteria term_crit;
+    // The number of attempts with different initial labellings.
+    int attempts;
   };
   boost::filesystem::path video_filepath;
   boost::filesystem::path output_dirpath;

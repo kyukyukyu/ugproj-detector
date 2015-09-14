@@ -189,6 +189,15 @@ bool parse_args(int argc, const char** argv, ugproj::Configuration* cfg) {
       ("clustering.k",
        po::value<int>(&cfg->clustering.k)->required(),
        "the number of clusters to be found.")
+      ("clustering.term_crit_n",
+       po::value<int>(&cfg->clustering.term_crit.maxCount),
+       "the maximum number of iterations in k-means.")
+      ("clusterer.term_crit_eps",
+       po::value<double>(&cfg->clustering.term_crit.epsilon),
+       "the desired accuracy for k-means.")
+      ("clusterer.attempts",
+       po::value<int>(&cfg->clustering.attempts)->default_value(8),
+       "the number of attempts with different initial labellings.")
     ;
 
     po::options_description visible_options("Allowed options");
@@ -233,6 +242,26 @@ bool parse_args(int argc, const char** argv, ugproj::Configuration* cfg) {
       assoc_method = ugproj::ASSOC_SIFT;
     } else {
       throw "invalid association method";
+    }
+
+    // Resolve termination criteria for k-means.
+    {
+      bool empty_n = vm["clustering.term_crit_n"].empty();
+      bool empty_eps = vm["clustering.term_crit_eps"].empty();
+      auto& type = cfg->clustering.term_crit.type;
+      if (!empty_n) {
+        type = cv::TermCriteria::MAX_ITER;
+      }
+      if (!empty_eps) {
+        type = cv::TermCriteria::EPS;
+      }
+      if (empty_n && empty_eps) {
+        throw "At least one of max iteration number and desired accuracy "
+              "should be set for termination criteria for k-means.";
+      }
+      if (!empty_n && !empty_eps) {
+        type = cv::TermCriteria::MAX_ITER + cv::TermCriteria::EPS;
+      }
     }
   } catch (std::exception& e) {
     std::cerr << "Error: " << e.what() << '\n';
