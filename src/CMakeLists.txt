@@ -2,6 +2,7 @@
 list(APPEND project_SRCS "structure.cc")
 list(APPEND project_SRCS "detector/detector.cc")
 list(APPEND project_SRCS "associator/associator.cc")
+list(APPEND project_SRCS "clusterer/clusterer.cc")
 list(APPEND project_SRCS "file_io.cc")
 list(APPEND project_SRCS "face_tracker.cc")
 list(APPEND project_SRCS "main.cc")
