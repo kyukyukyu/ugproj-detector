@@ -1,4 +1,5 @@
 #include "clusterer/clusterer.h"
+#include "clusterer/visualizer.h"
 #include "face_tracker.h"
 #include "file_io.h"
 #include "structure.h"
@@ -55,11 +56,12 @@ int main(int argc, const char** argv) {
   std::vector<ugproj::face_id_t> cluster_ids;
   // Clusterer object for representative faces of tracklets.
   ugproj::FaceClusterer clusterer(cfg);
-  clusterer.set_writer(&writer);
-  ret = clusterer.do_clustering(repr_faces_reduced, &cluster_ids);
-  if (ret != 0) {
-    return ret;
-  }
+  clusterer.do_clustering(repr_faces_reduced, &cluster_ids);
+
+  // Writes the visualization of result of clustering to multiple files.
+  ugproj::FaceClustersVisualizer visualizer(&writer);
+  visualizer.visualize(tracked_positions, labeled_faces,
+                       cfg.clustering.k, cluster_ids);
 
   return 0;
 }
