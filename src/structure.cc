@@ -1,6 +1,6 @@
 #include "structure.h"
 
-using namespace ugproj;
+namespace ugproj {
 
 cv::Mat FaceCandidate::resized_image(int size) const {
   cv::Mat resized;
@@ -32,3 +32,5 @@ Face::Face(id_type id, const FaceCandidate& candidate): id(id) {
 void Face::addCandidate(const FaceCandidate& candidate) {
     candidates.push_back(candidate);
 }
+
+}   // namespace ugproj
