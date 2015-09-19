@@ -7,8 +7,6 @@
 #include <vector>
 
 
-bool parse_args(int argc, const char** argv, ugproj::Configuration* cfg);
-
 int main(int argc, const char** argv) {
   int ret = 0;
 
