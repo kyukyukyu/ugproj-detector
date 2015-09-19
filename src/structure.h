@@ -111,6 +111,10 @@ struct Configuration {
     // The number of attempts with different initial labellings.
     int attempts;
   };
+  // Loads configuration from command line arguments and configuration file
+  // whose path is provided as command line argument. Returns 0 on successful
+  // loading, otherwise nonzero value.
+  int load(int argc, const char** argv);
   boost::filesystem::path video_filepath;
   boost::filesystem::path output_dirpath;
   ScanSection scan;
