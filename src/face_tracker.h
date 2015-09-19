@@ -14,7 +14,8 @@ class FaceTracker {
     int set_input(FileInput* input);
     int set_writer(FileWriter* writer);
     int set_cfg(const Configuration* cfg);
-    int track(std::vector<unsigned long>* tracked_positions);
+    int track(std::vector<unsigned long>* tracked_positions,
+              std::vector<Face>* labeled_faces);
 
   private:
     struct VideoProperties {
@@ -33,8 +34,9 @@ class FaceTracker {
         const FaceCandidateList* prev_candidates,
         const std::vector<SparseOptflow>& prev_optflows,
         FaceDetector* detector,
-      FaceCandidateList* curr_candidates,
-      std::vector<SparseOptflow>* curr_optflows);
+        FaceCandidateList* curr_candidates,
+        std::vector<SparseOptflow>* curr_optflows,
+        std::vector<Face>* labeled_faces);
     int write_result(
         const temp_idx_t curr_index,
         const std::vector<unsigned long>& tracked_positions,
@@ -80,8 +82,6 @@ class FaceTracker {
     FileInput* input_;
     FileWriter* writer_;
     const Configuration* cfg_;
-    // List of labeled faces.
-    std::vector<Face> labeled_faces_;
 };
 
 }  // namespace ugproj

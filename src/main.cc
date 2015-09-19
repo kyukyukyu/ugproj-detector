@@ -1,3 +1,5 @@
+#include "clusterer/clusterer.h"
+#include "clusterer/visualizer.h"
 #include "face_tracker.h"
 #include "file_io.h"
 #include "structure.h"
@@ -33,14 +35,33 @@ int main(int argc, const char** argv) {
 
   // The list of tracked frame positions.
   std::vector<unsigned long> tracked_positions;
+  // The list of labeled faces using face tracker.
+  std::vector<ugproj::Face> labeled_faces;
   ugproj::FaceTracker tracker;
   tracker.set_input(&input);
   tracker.set_writer(&writer);
   tracker.set_cfg(&cfg);
-  ret = tracker.track(&tracked_positions);
+  ret = tracker.track(&tracked_positions, &labeled_faces);
   if (ret != 0) {
     return ret;
   }
+
+  // TODO: Add some code that picks representative face from each face
+  // tracklet, and does dimensionality reduction using PCA.
+  //
+  // Matrix that includes the result of PCA. Each row represents the
+  // representative face of a tracklet.
+  cv::Mat repr_faces_reduced;
+  // List of cluster IDs for face tracklets.
+  std::vector<ugproj::face_id_t> cluster_ids;
+  // Clusterer object for representative faces of tracklets.
+  ugproj::FaceClusterer clusterer(cfg);
+  clusterer.do_clustering(repr_faces_reduced, &cluster_ids);
+
+  // Writes the visualization of result of clustering to multiple files.
+  ugproj::FaceClustersVisualizer visualizer(&writer);
+  visualizer.visualize(tracked_positions, labeled_faces,
+                       cfg.clustering.k, cluster_ids);
 
   return 0;
 }
@@ -166,6 +187,19 @@ bool parse_args(int argc, const char** argv, ugproj::Configuration* cfg) {
            ->default_value(1.5),
        "coefficient for threshold on the aspect ratio of each fit box. "
        "should be greater than or equal to 1.0.")
+
+      ("clustering.k",
+       po::value<int>(&cfg->clustering.k)->required(),
+       "the number of clusters to be found.")
+      ("clustering.term_crit_n",
+       po::value<int>(&cfg->clustering.term_crit.maxCount),
+       "the maximum number of iterations in k-means.")
+      ("clusterer.term_crit_eps",
+       po::value<double>(&cfg->clustering.term_crit.epsilon),
+       "the desired accuracy for k-means.")
+      ("clusterer.attempts",
+       po::value<int>(&cfg->clustering.attempts)->default_value(8),
+       "the number of attempts with different initial labellings.")
     ;
 
     po::options_description visible_options("Allowed options");
@@ -210,6 +244,26 @@ bool parse_args(int argc, const char** argv, ugproj::Configuration* cfg) {
       assoc_method = ugproj::ASSOC_SIFT;
     } else {
       throw "invalid association method";
+    }
+
+    // Resolve termination criteria for k-means.
+    {
+      bool empty_n = vm["clustering.term_crit_n"].empty();
+      bool empty_eps = vm["clustering.term_crit_eps"].empty();
+      auto& type = cfg->clustering.term_crit.type;
+      if (!empty_n) {
+        type = cv::TermCriteria::MAX_ITER;
+      }
+      if (!empty_eps) {
+        type = cv::TermCriteria::EPS;
+      }
+      if (empty_n && empty_eps) {
+        throw "At least one of max iteration number and desired accuracy "
+              "should be set for termination criteria for k-means.";
+      }
+      if (!empty_n && !empty_eps) {
+        type = cv::TermCriteria::MAX_ITER + cv::TermCriteria::EPS;
+      }
     }
   } catch (std::exception& e) {
     std::cerr << "Error: " << e.what() << '\n';

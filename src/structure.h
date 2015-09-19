@@ -103,6 +103,14 @@ struct Configuration {
     // be greater than or equal to 1.0.
     double coeff_thres_aspect;
   };
+  struct ClusteringSection {
+    // The number of clusters to be found.
+    int k;
+    // Termination criteria for k-means.
+    cv::TermCriteria term_crit;
+    // The number of attempts with different initial labellings.
+    int attempts;
+  };
   boost::filesystem::path video_filepath;
   boost::filesystem::path output_dirpath;
   ScanSection scan;
@@ -111,6 +119,7 @@ struct Configuration {
   SubpixelSection subpixel;
   LucasKanadeSection lucas_kanade;
   AssociationSection association;
+  ClusteringSection clustering;
 };
 
 class FaceCandidate {

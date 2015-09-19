@@ -29,7 +29,8 @@ int FaceTracker::set_cfg(const Configuration* cfg) {
   return 0;
 }
 
-int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
+int FaceTracker::track(std::vector<unsigned long>* tracked_positions,
+                       std::vector<Face>* labeled_faces) {
   // Return value of this method.
   int ret = 0;
 
@@ -121,7 +122,7 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
       curr_optflows = new std::vector<SparseOptflow>();
       ret = this->track_frame(curr_index, prev_frame, curr_frame,
                               prev_candidates, *prev_optflows, &detector,
-                              curr_candidates, curr_optflows);
+                              curr_candidates, curr_optflows, labeled_faces);
       if (ret != 0) {
         break;
       }
@@ -152,7 +153,7 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions) {
 
   delete prev_candidates;
 
-  for (const Face& f : this->labeled_faces_) {
+  for (const Face& f : *labeled_faces) {
     ret = this->write_tracklet(f, *tracked_positions);
     if (ret != 0) {
       break;
@@ -183,7 +184,8 @@ int FaceTracker::track_frame(
     const std::vector<SparseOptflow>& prev_optflows,
     FaceDetector* detector,
     FaceCandidateList* curr_candidates,
-    std::vector<SparseOptflow>* curr_optflows) {
+    std::vector<SparseOptflow>* curr_optflows,
+    std::vector<Face>* labeled_faces) {
   std::printf("Detecting faces... ");
   this->detect_faces(curr_index, curr_frame, detector, curr_candidates);
   std::printf("done. Found %lu faces.\n", curr_candidates->size());
@@ -201,7 +203,7 @@ int FaceTracker::track_frame(
   std::printf("done.\n");
   std::printf("Associating detected faces between previous frame and current "
               "frame... ");
-  KltFaceAssociator associator(this->labeled_faces_,
+  KltFaceAssociator associator(*labeled_faces,
                                *prev_candidates, *curr_candidates,
                                curr_index, curr_frame, *curr_optflows,
                                this->cfg_->association.threshold);
