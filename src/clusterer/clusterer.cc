@@ -13,7 +13,7 @@ void FaceClusterer::set_cfg(const Configuration& cfg) {
 }
 
 void FaceClusterer::do_clustering(const cv::Mat& repr_faces_reduced,
-                                  std::vector<face_id_t>* cluster_ids) {
+                                  std::vector<tracklet_id_t>* cluster_ids) {
   double compactness;
   const auto& cfg_cl = this->cfg_->clustering;
   compactness = cv::kmeans(repr_faces_reduced, cfg_cl.k, *cluster_ids,

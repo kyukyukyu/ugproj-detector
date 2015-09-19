@@ -4,7 +4,7 @@
 
 namespace ugproj {
 
-cv::Mat FaceCandidate::resized_image(int size) const {
+cv::Mat Face::resized_image(int size) const {
   cv::Mat resized;
   const cv::Size& orig_size = this->rect.size();
   double f;
@@ -27,12 +27,12 @@ cv::Mat FaceCandidate::resized_image(int size) const {
   return resized;
 }
 
-Face::Face(id_type id, const FaceCandidate& candidate): id(id) {
-    addCandidate(candidate);
+FaceTracklet::FaceTracklet(id_type id, const Face& f) : id(id) {
+  add_face(f);
 }
 
-void Face::addCandidate(const FaceCandidate& candidate) {
-    candidates.push_back(candidate);
+void FaceTracklet::add_face(const Face& f) {
+  faces.push_back(f);
 }
 
 int Configuration::load(int argc, const char** argv) {
@@ -236,6 +236,9 @@ int Configuration::load(int argc, const char** argv) {
     }
   } catch (std::exception& e) {
     std::cerr << "Error: " << e.what() << '\n';
+    return -1;
+  } catch (const char*& e) {
+    std::cerr << "Error: " << e << '\n';
     return -1;
   } catch (...) {
     std::cerr << "Unknown error!\n";

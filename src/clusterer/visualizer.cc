@@ -8,16 +8,16 @@ FaceClustersVisualizer::FaceClustersVisualizer(FileWriter* writer) {
 
 int FaceClustersVisualizer::visualize(
     const std::vector<unsigned long>& tracked_positions,
-    const std::vector<Face>& labeled_faces,
+    const std::vector<FaceTracklet>& labeled_faces,
     const int n_clusters,
-    const std::vector<face_id_t>& cluster_ids) {
+    const std::vector<tracklet_id_t>& cluster_ids) {
   int ret = 0;
-  std::vector< std::vector<Face> > clusters;
+  std::vector< std::vector<FaceTracklet> > clusters;
   clusters.reserve(n_clusters);
   for (unsigned long i = 0, n = labeled_faces.size(); i < n; ++i) {
-    face_id_t cluster_id = cluster_ids[i];
-    const Face& tracklet = labeled_faces[i];
-    std::vector<Face>& cluster = clusters[cluster_id];
+    tracklet_id_t cluster_id = cluster_ids[i];
+    const FaceTracklet& tracklet = labeled_faces[i];
+    std::vector<FaceTracklet>& cluster = clusters[cluster_id];
     cluster.push_back(tracklet);
   }
   for (int i = 0; i < n_clusters; ++i) {
@@ -31,8 +31,8 @@ int FaceClustersVisualizer::visualize(
 
 int FaceClustersVisualizer::visualize_single(
     const std::vector<unsigned long>& tracked_positions,
-    const std::vector<Face>& faces,
-    face_id_t cluster_id) {
+    const std::vector<FaceTracklet>& faces,
+    tracklet_id_t cluster_id) {
   // TODO: Get rid of duplicates on code.
   // TODO: Move this constant to class declaration.
   static const int kSize = 64;
@@ -41,28 +41,28 @@ int FaceClustersVisualizer::visualize_single(
   static const cv::Scalar kColorTextbox = CV_RGB(0, 0, 0);
   static const int kMarginTextbox = 4;
   // Count number of faces to be drawn.
-  int n_candidates = 0;
+  int n_faces = 0;
   for (const auto& tracklet : faces) {
-    const auto iterators = tracklet.candidate_iterators();
-    n_candidates += iterators.second - iterators.first;
+    const auto iterators = tracklet.face_iterators();
+    n_faces += iterators.second - iterators.first;
   }
   // Draw tracklet.
-  const int n_rows = n_candidates / kNCols + !!(n_candidates % kNCols);
+  const int n_rows = n_faces / kNCols + !!(n_faces % kNCols);
   cv::Mat visualized(n_rows * kSize, kNCols * kSize, CV_8UC3);
   visualized = CV_RGB(255, 255, 255);
   int i = 0;
   for (const auto& tracklet : faces) {
-    const auto iterators = tracklet.candidate_iterators();
+    const auto iterators = tracklet.face_iterators();
     for (auto it = iterators.first; it != iterators.second; ++it, ++i) {
-      const FaceCandidate& fc = *it;
+      const Face& f = *it;
       const cv::Rect roi((i % kNCols) * kSize, (i / kNCols) * kSize,
                          kSize, kSize);
       cv::Mat visualized_roi(visualized, roi);
-      // Draw the image of face candidate.
-      fc.resized_image(kSize).copyTo(visualized_roi);
-      // Prepare the information of face candidate.
+      // Draw the image of face.
+      f.resized_image(kSize).copyTo(visualized_roi);
+      // Prepare the information of face.
       char c_str_frame_pos[16];
-      std::sprintf(c_str_frame_pos, "%lu", tracked_positions[fc.frameIndex]);
+      std::sprintf(c_str_frame_pos, "%lu", tracked_positions[f.frameIndex]);
       std::string str_frame_pos(c_str_frame_pos);
       // Compute the position for the information text and box including it.
       int baseline;

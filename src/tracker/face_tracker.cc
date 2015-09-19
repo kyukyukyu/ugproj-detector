@@ -30,7 +30,7 @@ int FaceTracker::set_cfg(const Configuration* cfg) {
 }
 
 int FaceTracker::track(std::vector<unsigned long>* tracked_positions,
-                       std::vector<Face>* labeled_faces) {
+                       std::vector<FaceTracklet>* tracklets) {
   // Return value of this method.
   int ret = 0;
 
@@ -81,10 +81,10 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions,
   cv::Mat curr_frame_orig;
   // The matrix representing resized previous grabbed frame.
   cv::Mat prev_frame;
-  // The list of face candidates detected in current grabbed frame.
-  FaceCandidateList* curr_candidates = NULL;
-  // The list of face candidates detected in previous grabbed frame.
-  FaceCandidateList* prev_candidates = NULL;
+  // The list of faces detected in current grabbed frame.
+  FaceList* curr_faces = NULL;
+  // The list of faces detected in previous grabbed frame.
+  FaceList* prev_faces = NULL;
   // The list of sparse optical flows computed at current tracking.
   std::vector<SparseOptflow>* curr_optflows = NULL;
   // The list of sparse optical flows computed at previous tracking.
@@ -118,11 +118,11 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions,
 
       // Track current grabbed frame.
       std::printf("Tracking faces for frame #%ld...\n", pos);
-      curr_candidates = new FaceCandidateList();
+      curr_faces = new FaceList();
       curr_optflows = new std::vector<SparseOptflow>();
       ret = this->track_frame(curr_index, prev_frame, curr_frame,
-                              prev_candidates, *prev_optflows, &detector,
-                              curr_candidates, curr_optflows, labeled_faces);
+                              prev_faces, *prev_optflows, &detector,
+                              curr_faces, curr_optflows, tracklets);
       if (ret != 0) {
         break;
       }
@@ -131,19 +131,19 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions,
       // Write tracking result of current grabbed frame to file(s).
       ret = this->write_result(curr_index, *tracked_positions,
                                sx, sy, curr_frame_orig,
-                               *curr_candidates, *curr_optflows);
+                               *curr_faces, *curr_optflows);
       if (ret != 0) {
         break;
       }
 
       // Get ready for next tracking.
-      if (!curr_candidates->empty()) {
+      if (!curr_faces->empty()) {
         last_index_detected = curr_index;
       }
       if (curr_index > 0) {
-        delete prev_candidates;
+        delete prev_faces;
       }
-      prev_candidates = curr_candidates;
+      prev_faces = curr_faces;
       prev_optflows = curr_optflows;
       curr_frame.copyTo(prev_frame);
       ++curr_index;
@@ -151,9 +151,9 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions,
     ++pos;
   }
 
-  delete prev_candidates;
+  delete prev_faces;
 
-  for (const Face& f : *labeled_faces) {
+  for (const FaceTracklet& f : *tracklets) {
     ret = this->write_tracklet(f, *tracked_positions);
     if (ret != 0) {
       break;
@@ -180,31 +180,31 @@ int FaceTracker::track_frame(
     const temp_idx_t curr_index,
     const cv::Mat& prev_frame,
     const cv::Mat& curr_frame,
-    const FaceCandidateList* prev_candidates,
+    const FaceList* prev_faces,
     const std::vector<SparseOptflow>& prev_optflows,
     FaceDetector* detector,
-    FaceCandidateList* curr_candidates,
+    FaceList* curr_faces,
     std::vector<SparseOptflow>* curr_optflows,
-    std::vector<Face>* labeled_faces) {
+    std::vector<FaceTracklet>* tracklets) {
   std::printf("Detecting faces... ");
-  this->detect_faces(curr_index, curr_frame, detector, curr_candidates);
-  std::printf("done. Found %lu faces.\n", curr_candidates->size());
+  this->detect_faces(curr_index, curr_frame, detector, curr_faces);
+  std::printf("done. Found %lu faces.\n", curr_faces->size());
 
-  if (prev_candidates == NULL) {
-    std::printf("no prev candidates");
+  if (prev_faces == NULL) {
+    std::printf("no prev faces");
     return 0;
   }
 
   std::printf("Computing Lucas-Kanade optical flow between previous frame and "
               "current frame... ");
   this->compute_optflow(prev_frame, curr_frame,
-                        *prev_candidates, prev_optflows,
+                        *prev_faces, prev_optflows,
                         curr_optflows);
   std::printf("done.\n");
   std::printf("Associating detected faces between previous frame and current "
               "frame... ");
-  KltFaceAssociator associator(*labeled_faces,
-                               *prev_candidates, *curr_candidates,
+  KltFaceAssociator associator(*tracklets,
+                               *prev_faces, *curr_faces,
                                curr_index, curr_frame, *curr_optflows,
                                this->cfg_->association.threshold);
   associator.associate();
@@ -219,7 +219,7 @@ int FaceTracker::write_result(
     const double sx,
     const double sy,
     const cv::Mat& curr_frame,
-    const FaceCandidateList& curr_candidates,
+    const FaceList& curr_faces,
     const std::vector<SparseOptflow>& curr_optflows) {
   // Return value of this method.
   int ret = 0;
@@ -240,18 +240,18 @@ int FaceTracker::write_result(
   cv::Mat image = curr_frame.clone();
 
   // Draw face detections and their association results.
-  for (FaceCandidateList::const_iterator it = curr_candidates.cbegin();
-       it != curr_candidates.cend();
+  for (FaceList::const_iterator it = curr_faces.cbegin();
+       it != curr_faces.cend();
        ++it) {
     const cv::Rect& orig_rect = it->rect;
     const cv::Rect face(orig_rect.x * sx, orig_rect.y * sy,
                         orig_rect.width * sx, orig_rect.height * sy);
-    const auto face_id = it->faceId;
+    const auto face_id = it->tracklet_id;
     const auto fitted = it->fitted;
     const cv::Scalar& color =
         colors[face_id % (sizeof(colors) / sizeof(cv::Scalar))];
     cv::rectangle(image, face.tl(), face.br(), color);
-    if(fitted == 0){ // candidate
+    if(fitted == 0){ // detected face
       cv::putText(image, std::to_string(face_id), face.tl() + cv::Point(4, 4),
                 cv::FONT_HERSHEY_PLAIN, 1.0, color);
     }else{
@@ -290,15 +290,15 @@ int FaceTracker::write_result(
 int FaceTracker::detect_faces(const temp_idx_t curr_index,
                               const cv::Mat& curr_frame,
                               FaceDetector* detector,
-                              FaceCandidateList* curr_candidates) {
+                              FaceList* curr_faces) {
   std::vector<cv::Rect> rects;
   detector->detectFaces(curr_frame, rects);
   for (std::vector<cv::Rect>::const_iterator it = rects.cbegin();
        it != rects.cend();
        ++it) {
-    cv::Mat candidate_img(curr_frame, *it);
-    FaceCandidate candidate(curr_index, *it, candidate_img);
-    curr_candidates->push_back(candidate);
+    cv::Mat img_face(curr_frame, *it);
+    Face f(curr_index, *it, img_face);
+    curr_faces->push_back(f);
   }
   return 0;
 }
@@ -306,7 +306,7 @@ int FaceTracker::detect_faces(const temp_idx_t curr_index,
 int FaceTracker::compute_optflow(
     const cv::Mat& prev_frame,
     const cv::Mat& curr_frame,
-    const FaceCandidateList& prev_candidates,
+    const FaceList& prev_faces,
     const std::vector<SparseOptflow>& prev_optflows,
     std::vector<SparseOptflow>* curr_optflows) {
   std::printf("compute_optflow\n");
@@ -318,7 +318,7 @@ int FaceTracker::compute_optflow(
   cvtColor(curr_frame, curr_gray, CV_BGR2GRAY);
   // Points in the previous frame at which the optical flow will be computed.
   std::vector<cv::Point2f> prev_points =
-      this->prepare_points_for_lk(prev_gray, prev_candidates, prev_optflows);
+      this->prepare_points_for_lk(prev_gray, prev_faces, prev_optflows);
 
   if (prev_points.empty()) {
     curr_optflows->clear();
@@ -332,7 +332,7 @@ int FaceTracker::compute_optflow(
 
 std::vector<cv::Point2f> FaceTracker::prepare_points_for_lk(
     const cv::Mat& gray_frame,
-    const FaceCandidateList& candidates,
+    const FaceList& faces,
     const std::vector<SparseOptflow>& optflows) {
   // Points in the frame at which optical flows will be computed.
   std::vector<cv::Point2f> points;
@@ -343,7 +343,7 @@ std::vector<cv::Point2f> FaceTracker::prepare_points_for_lk(
   // Compute mask for GFTT.
   cv::Mat mask;
   bool run_gftt = this->compute_roi_gftt(gray_frame.size(),
-                                         candidates,
+                                         faces,
                                          optflows,
                                          &mask);
   // Run GFTT if needed.
@@ -376,14 +376,14 @@ std::vector<cv::Point2f> FaceTracker::prepare_points_for_lk(
 
 bool FaceTracker::compute_roi_gftt(
     const cv::Size& frame_size,
-    const FaceCandidateList& candidates,
+    const FaceList& faces,
     const std::vector<SparseOptflow>& optflows,
     cv::Mat* roi) {
   roi->create(frame_size, CV_8UC1);
   roi->setTo(cv::Scalar(0));
   bool run_gftt = false;
-  for (const FaceCandidate& candidate : candidates) {
-    const cv::Rect& rect = candidate.rect;
+  for (const Face& f : faces) {
+    const cv::Rect& rect = f.rect;
     std::vector<SparseOptflow>::const_iterator it_b;
     bool set_mask = true;
     unsigned int n_optflows = 0;
@@ -444,7 +444,7 @@ void FaceTracker::run_lk(const cv::Mat& prev_gray,
 }
 
 int FaceTracker::write_tracklet(
-    const Face& f,
+    const FaceTracklet& tracklet,
     const std::vector<unsigned long>& tracked_positions) {
   // TODO: Move this constant to class declaration.
   static const int kSize = 64;
@@ -453,22 +453,22 @@ int FaceTracker::write_tracklet(
   static const cv::Scalar kColorTextbox = CV_RGB(0, 0, 0);
   static const int kMarginTextbox = 4;
   // Draw tracklet.
-  const auto iterators = f.candidate_iterators();
-  const int n_candidates = iterators.second - iterators.first;
-  const int n_rows = n_candidates / kNCols + !!(n_candidates % kNCols);
-  cv::Mat tracklet(n_rows * kSize, kNCols * kSize, CV_8UC3);
-  tracklet = CV_RGB(255, 255, 255);
+  const auto iterators = tracklet.face_iterators();
+  const int n_faces = iterators.second - iterators.first;
+  const int n_rows = n_faces / kNCols + !!(n_faces % kNCols);
+  cv::Mat img_tracklet(n_rows * kSize, kNCols * kSize, CV_8UC3);
+  img_tracklet = CV_RGB(255, 255, 255);
   int i = 0;
   for (auto it = iterators.first; it != iterators.second; ++it, ++i) {
-    const FaceCandidate& fc = *it;
+    const Face& f = *it;
     const cv::Rect roi((i % kNCols) * kSize, (i / kNCols) * kSize,
                        kSize, kSize);
-    cv::Mat tracklet_roi(tracklet, roi);
-    // Draw the image of face candidate.
-    fc.resized_image(kSize).copyTo(tracklet_roi);
-    // Prepare the information of face candidate.
+    cv::Mat img_tracklet_roi(img_tracklet, roi);
+    // Draw the image of face.
+    f.resized_image(kSize).copyTo(img_tracklet_roi);
+    // Prepare the information of face.
     char c_str_frame_pos[16];
-    std::sprintf(c_str_frame_pos, "%lu", tracked_positions[fc.frameIndex]);
+    std::sprintf(c_str_frame_pos, "%lu", tracked_positions[f.frameIndex]);
     std::string str_frame_pos(c_str_frame_pos);
     // Compute the position for the information text and box including it.
     int baseline;
@@ -482,15 +482,15 @@ int FaceTracker::write_tracklet(
                              2 * kMarginTextbox + text_size.height);
     // Draw the information text and box including it.
     // The box should be drawn first.
-    cv::rectangle(tracklet_roi, box_rec, kColorTextbox, CV_FILLED);
-    cv::putText(tracklet_roi, str_frame_pos, text_org, cv::FONT_HERSHEY_PLAIN,
-                1.0, kColorText);
+    cv::rectangle(img_tracklet_roi, box_rec, kColorTextbox, CV_FILLED);
+    cv::putText(img_tracklet_roi, str_frame_pos, text_org,
+                cv::FONT_HERSHEY_PLAIN, 1.0, kColorText);
   }
   // Prepare the filename.
   char filename[256];
-  std::sprintf(filename, "face_%d.png", f.id);
+  std::sprintf(filename, "face_%d.png", tracklet.id);
   // Write to file.
-  return this->writer_->write_image(tracklet, filename);
+  return this->writer_->write_image(img_tracklet, filename);
 }
 
 }  // namespace ugproj

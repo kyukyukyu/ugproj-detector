@@ -15,32 +15,29 @@
 namespace ugproj {
 
 class FaceAssociator {
-  public:
-    typedef std::vector<FaceCandidate> fc_v;
-
   protected:
-    std::vector<Face>& faces;
-    const fc_v& prevCandidates;
-    fc_v& nextCandidates;
+    std::vector<FaceTracklet>& tracklets;
+    const FaceList& prev_faces;
+    FaceList& next_faces;
     double **prob;
     double threshold;
 
-    void matchCandidates();
+    void match_faces();
 
   public:
     FaceAssociator(
-        std::vector<Face>& faces,
-        const fc_v& prevCandidates,
-        fc_v& nextCandidates,
+        std::vector<FaceTracklet>& faces,
+        const FaceList& prev_faces,
+        FaceList& next_faces,
         double threshold):
-      faces(faces),
-      prevCandidates(prevCandidates),
-      nextCandidates(nextCandidates),
+      tracklets(faces),
+      prev_faces(prev_faces),
+      next_faces(next_faces),
       threshold(threshold) {
         // probability array allocation
-        fc_v::size_type rows, cols;
-        rows = prevCandidates.size();
-        cols = nextCandidates.size();
+        FaceList::size_type rows, cols;
+        rows = prev_faces.size();
+        cols = next_faces.size();
 
         prob = new double *[rows];
         while (rows--) {
@@ -48,7 +45,7 @@ class FaceAssociator {
         }
       }
     virtual ~FaceAssociator() {
-      fc_v::size_type row = prevCandidates.size();
+      FaceList::size_type row = prev_faces.size();
       while (row--) {
         delete[] prob[row];
       }
@@ -58,10 +55,10 @@ class FaceAssociator {
     virtual void calculateProb() = 0;
 };
 
-// Associates face candidates using KLT algorithm and RANSAC-based box fitting.
+// Associates faces using KLT algorithm and RANSAC-based box fitting.
 //
 // KEEP IN MIND that calling `associate()` to instances of this class may put
-// new face candidates into `nextCandidates` to approximate 'undetected' faces
+// new faces into `next_faces` to approximate 'undetected' faces
 // in image. For more about this issue, check GitHub issue #14.
 class KltFaceAssociator : public FaceAssociator {
   public:
@@ -87,7 +84,7 @@ class KltFaceAssociator : public FaceAssociator {
       }
     };
     typedef std::set<Match, MatchCompare> MatchSet;
-    // Result of box-fitting with respect to single face candidate.
+    // Result of box-fitting with respect to single face.
     struct Fit {
       // Fit box.
       cv::Rect box;
@@ -97,7 +94,7 @@ class KltFaceAssociator : public FaceAssociator {
       int b;
 
       cv::Point origin;
-      // Set of outgoing matches from the face candidate.
+      // Set of outgoing matches from the face.
       MatchSet matches;
       // The number of inliers inside the fit box.
       unsigned int num_inliers;
@@ -106,9 +103,9 @@ class KltFaceAssociator : public FaceAssociator {
         return this->num_inliers > 0;
       }
     };
-    KltFaceAssociator(std::vector<Face>& faces,
-                      const FaceCandidateList& prev_candidates,
-                      FaceCandidateList& next_candidates,
+    KltFaceAssociator(std::vector<FaceTracklet>& faces,
+                      const FaceList& prev_faces,
+                      FaceList& next_faces,
                       const temp_idx_t next_index,
                       const cv::Mat& next_frame,
                       const std::vector<SparseOptflow>& optflows,
@@ -123,7 +120,7 @@ class KltFaceAssociator : public FaceAssociator {
       kOutgoing = 0,
       kIncoming
     };
-    // Computes best fits for each face candidate in former (i.e. previous)
+    // Computes best fits for each face in former (i.e. previous)
     // frame using RANSAC-based algorithm, and save it into `best_fits_`.
     void compute_best_fits();
     // Returns the set of matches whose outgoing/incoming points are inside a

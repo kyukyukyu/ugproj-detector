@@ -20,15 +20,15 @@ class FaceClustersVisualizer {
     // files will be like 'cluster_1.png'. Returns non-zero value if writing
     // files was not successful.
     int visualize(const std::vector<unsigned long>& tracked_positions,
-                  const std::vector<Face>& labeled_faces,
+                  const std::vector<FaceTracklet>& labeled_faces,
                   const int n_clusters,
-                  const std::vector<face_id_t>& cluster_ids);
+                  const std::vector<tracklet_id_t>& cluster_ids);
 
   private:
     // Generates visualization for single cluster and writes it to file.
     int visualize_single(const std::vector<unsigned long>& tracked_positions,
-                         const std::vector<Face>& faces,
-                         face_id_t cluster_id);
+                         const std::vector<FaceTracklet>& faces,
+                         tracklet_id_t cluster_id);
     // File writer for this object.
     FileWriter* writer_;
 };
