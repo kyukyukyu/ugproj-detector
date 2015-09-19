@@ -237,6 +237,9 @@ int Configuration::load(int argc, const char** argv) {
   } catch (std::exception& e) {
     std::cerr << "Error: " << e.what() << '\n';
     return -1;
+  } catch (const char*& e) {
+    std::cerr << "Error: " << e << '\n';
+    return -1;
   } catch (...) {
     std::cerr << "Unknown error!\n";
     return -1;
