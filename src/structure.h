@@ -9,12 +9,12 @@
 
 namespace ugproj {
 
-class FaceCandidate;
+class Face;
 
 typedef unsigned long temp_idx_t;
-typedef unsigned int face_id_t;
+typedef unsigned int tracklet_id_t;
 
-typedef std::vector<FaceCandidate> FaceCandidateList;
+typedef std::vector<Face> FaceList;
 
 // Represents single sparse optflow computed between two images.
 struct SparseOptflow {
@@ -126,40 +126,40 @@ struct Configuration {
   ClusteringSection clustering;
 };
 
-class FaceCandidate {
+class Face {
   public:
     temp_idx_t frameIndex;
     cv::Rect rect;
     cv::Mat image;
-    face_id_t faceId;
+    tracklet_id_t tracklet_id;
     int fitted = 0;
 
-    FaceCandidate(const temp_idx_t frameIndex, const cv::Rect& rect,
+    Face(const temp_idx_t frameIndex, const cv::Rect& rect,
                   const cv::Mat& image) :
-        frameIndex(frameIndex), rect(rect), image(image), faceId(0) {};
-    FaceCandidate(const FaceCandidate& fc) {
-      this->frameIndex = fc.frameIndex;
-      this->rect = fc.rect;
-      fc.image.copyTo(this->image);
-      this->faceId = fc.faceId;
-      this->fitted = fc.fitted;
+        frameIndex(frameIndex), rect(rect), image(image), tracklet_id(0) {};
+    Face(const Face& f) {
+      this->frameIndex = f.frameIndex;
+      this->rect = f.rect;
+      f.image.copyTo(this->image);
+      this->tracklet_id = f.tracklet_id;
+      this->fitted = f.fitted;
     }
     cv::Mat resized_image(int size) const;
 };
 
-class Face {
+class FaceTracklet {
   private:
-    std::vector<FaceCandidate> candidates;
+    std::vector<Face> faces;
 
   public:
-    typedef face_id_t id_type;
+    typedef tracklet_id_t id_type;
     const id_type id;
-    Face(id_type id) : id(id) {};
-    Face(id_type id, const FaceCandidate& candidate);
-    void addCandidate(const FaceCandidate& candidate);
-    std::pair<FaceCandidateList::const_iterator,
-              FaceCandidateList::const_iterator> candidate_iterators() const {
-      return {this->candidates.cbegin(), this->candidates.cend()};
+    FaceTracklet(id_type id) : id(id) {};
+    FaceTracklet(id_type id, const Face& f);
+    void add_face(const Face& f);
+    std::pair<FaceList::const_iterator,
+              FaceList::const_iterator> face_iterators() const {
+      return {this->faces.cbegin(), this->faces.cend()};
     }
 };
 

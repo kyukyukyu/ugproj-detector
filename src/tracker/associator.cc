@@ -23,11 +23,11 @@ using Eigen::MatrixXd;
 using namespace Eigen;
 using namespace boost;
 
-void FaceAssociator::matchCandidates() {
-  typedef fc_v::size_type size_type;
+void FaceAssociator::match_faces() {
+  typedef FaceList::size_type size_type;
 
   const size_type
-    prevSize = prevCandidates.size(), nextSize = nextCandidates.size();
+      prevSize = prev_faces.size(), nextSize = next_faces.size();
 
   for (size_type j = 0; j < nextSize; ++j) {
     double max = -1;
@@ -40,32 +40,32 @@ void FaceAssociator::matchCandidates() {
       }
     }
 
-    vector<Face>::size_type faceId;
+    vector<FaceTracklet>::size_type tracklet_id;
     if (max > 0) {
-      faceId = prevCandidates[maxRow].faceId;
+      tracklet_id = prev_faces[maxRow].tracklet_id;
     } else {
-      faceId = faces.size() + 1;
-      faces.push_back(Face(faceId));
+      tracklet_id = tracklets.size() + 1;
+      tracklets.push_back(FaceTracklet(tracklet_id));
     }
-    nextCandidates[j].faceId = faceId;
-    faces[faceId - 1].addCandidate(nextCandidates[j]);
+    next_faces[j].tracklet_id = tracklet_id;
+    tracklets[tracklet_id - 1].add_face(next_faces[j]);
   }
 }
 
 void FaceAssociator::associate() {
   calculateProb();
-  matchCandidates();
+  match_faces();
 }
 
 KltFaceAssociator::KltFaceAssociator(
-    std::vector<Face>& faces,
-    const FaceCandidateList& prev_candidates,
-    FaceCandidateList& next_candidates,
+    std::vector<FaceTracklet>& faces,
+    const FaceList& prev_faces,
+    FaceList& next_faces,
     const temp_idx_t next_index,
     const cv::Mat& next_frame,
     const std::vector<SparseOptflow>& optflows,
     double threshold) :
-  FaceAssociator(faces, prev_candidates, next_candidates, threshold),
+  FaceAssociator(faces, prev_faces, next_faces, threshold),
   next_index_(next_index),
   next_frame_(next_frame),
   frame_size_(next_frame.size()),
@@ -73,13 +73,13 @@ KltFaceAssociator::KltFaceAssociator(
 
 void KltFaceAssociator::associate() {
   FaceAssociator::associate();
-  // Add best fits of non-labeled face candidates in previous frame to
-  // nextCandidates.
-  const auto prev_size = this->prevCandidates.size();
-  const auto next_size = this->nextCandidates.size();
-  for (FaceCandidateList::size_type i = 0; i < prev_size; ++i) {
+  // Add best fits of non-labeled faces in previous frame to
+  // next_faces.
+  const auto prev_size = this->prev_faces.size();
+  const auto next_size = this->next_faces.size();
+  for (FaceList::size_type i = 0; i < prev_size; ++i) {
     unsigned int n_overlapped = 0;
-    for (FaceCandidateList::size_type j = 0; j < next_size; ++j) {
+    for (FaceList::size_type j = 0; j < next_size; ++j) {
       if (this->prob[i][j] > threshold) {
         ++n_overlapped;
       }
@@ -91,12 +91,12 @@ void KltFaceAssociator::associate() {
       }
       const cv::Rect& face_rect = best_fit.box;
       const cv::Mat face_img(this->next_frame_, face_rect);
-      const face_id_t face_id = this->prevCandidates[i].faceId;
-      FaceCandidate restored(this->next_index_, face_rect, face_img);
-      restored.faceId = face_id;
+      const tracklet_id_t face_id = this->prev_faces[i].tracklet_id;
+      Face restored(this->next_index_, face_rect, face_img);
+      restored.tracklet_id = face_id;
       restored.fitted = 1;
-      this->nextCandidates.push_back(restored);
-      this->faces[face_id - 1].addCandidate(restored);
+      this->next_faces.push_back(restored);
+      this->tracklets[face_id - 1].add_face(restored);
     }
   }
 }
@@ -108,10 +108,10 @@ void KltFaceAssociator::calculateProb() {
   // Best fits will be saved into `this->best_fits_`.
   this->compute_best_fits();
 
-  // Compute correspondence for each pair of face candidates in two frames.
-  FaceCandidateList::size_type i, j, n_prev_cdds, n_next_cdds;
-  n_prev_cdds = this->prevCandidates.size();
-  n_next_cdds = this->nextCandidates.size();
+  // Compute correspondence for each pair of faces in two frames.
+  FaceList::size_type i, j, n_prev_cdds, n_next_cdds;
+  n_prev_cdds = this->prev_faces.size();
+  n_next_cdds = this->next_faces.size();
   for (i = 0; i < n_prev_cdds; ++i) {
     Fit& best_fit = this->best_fits_[i];
     if (!best_fit.valid()) {
@@ -122,7 +122,7 @@ void KltFaceAssociator::calculateProb() {
 
     const cv::Rect& fit_box = best_fit.box;
     for (j = 0; j < n_next_cdds; ++j) {
-      const cv::Rect& cdd_box = this->nextCandidates[j].rect;
+      const cv::Rect& cdd_box = this->next_faces[j].rect;
       cv::Rect intersection = fit_box & cdd_box;
       const int intersectArea = intersection.area();
       this->prob[i][j] =
@@ -133,11 +133,11 @@ void KltFaceAssociator::calculateProb() {
 }
 
 void KltFaceAssociator::compute_best_fits() {
-  FaceCandidateList::const_iterator it;
-  for (it = this->prevCandidates.cbegin();
-       it != this->prevCandidates.cend();
+  FaceList::const_iterator it;
+  for (it = this->prev_faces.cbegin();
+       it != this->prev_faces.cend();
        ++it) {
-    const FaceCandidate& prev_cdd = *it;
+    const Face& prev_cdd = *it;
     const cv::Rect& prev_cdd_box = prev_cdd.rect;
     // Find optical flows whose outgoing point is inside `prev_cdd`.
     const MatchSet outgoing_matches =

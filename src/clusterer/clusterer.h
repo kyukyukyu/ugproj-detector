@@ -24,7 +24,7 @@ class FaceClusterer {
     // If file writer is set for this object, visualization of clustering
     // result will be written in image files as described above.
     void do_clustering(const cv::Mat& repr_faces_reduced,
-                       std::vector<face_id_t>* cluster_ids);
+                       std::vector<tracklet_id_t>* cluster_ids);
 
   private:
     // Configuration used for clustering.

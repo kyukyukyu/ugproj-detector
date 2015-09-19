@@ -29,13 +29,13 @@ int main(int argc, const char** argv) {
 
   // The list of tracked frame positions.
   std::vector<unsigned long> tracked_positions;
-  // The list of labeled faces using face tracker.
-  std::vector<ugproj::Face> labeled_faces;
+  // The list of face tracklets.
+  std::vector<ugproj::FaceTracklet> tracklets;
   ugproj::FaceTracker tracker;
   tracker.set_input(&input);
   tracker.set_writer(&writer);
   tracker.set_cfg(&cfg);
-  ret = tracker.track(&tracked_positions, &labeled_faces);
+  ret = tracker.track(&tracked_positions, &tracklets);
   if (ret != 0) {
     return ret;
   }
