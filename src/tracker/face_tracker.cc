@@ -488,7 +488,7 @@ int FaceTracker::write_tracklet(
 int FaceTracker::write_mapping_file(
     const std::vector<unsigned long>& tracked_positions) {
     
-  std::string output_path = this->writer_->get_output_path();
+  std::string output_path = this->writer_->output_path();
   
   char filename[256];
   std::sprintf(filename, "%s/mapping.yaml",output_path.c_str());
@@ -511,7 +511,7 @@ int FaceTracker::write_tracklet_metadata(
     const std::vector<unsigned long>& tracked_positions) {
   // TODO: Move this constant to class declaration.
 
-  std::string output_path = this->writer_->get_output_path();
+  std::string output_path = this->writer_->output_path();
   
   char filename[256];
   std::sprintf(filename, "%s/tracklet.yaml",output_path.c_str());
