@@ -35,7 +35,7 @@ int main(int argc, const char** argv) {
     // i.e. Given tracklet #1 {face #1, face #2}, tracklet #2 {face #3},
     // repr_faces_reduced should have dimensionality-reduced vector for
     // face #1, face #2, and face #3 in order, from the first row.
-    cv::Mat repr_faces_reduced;
+    cv::Mat faces_reduced;
 
     // TODO: Make clusterer accept tracklet information and assign a cluster
     // label to each tracklet by voting.
@@ -44,9 +44,9 @@ int main(int argc, const char** argv) {
 
     // List of cluster IDs for face tracklets.
     std::vector<int> cluster_ids;
-    // Clusterer object for representative faces of tracklets.
+    // Clusterer object for faces.
     ugproj::FaceClusterer clusterer(cfg);
-    clusterer.do_clustering(repr_faces_reduced, &cluster_ids);
+    clusterer.do_clustering(faces_reduced, tracklets, &cluster_ids);
 
     // Writes the visualization of result of clustering to multiple files.
     ugproj::FaceClustersVisualizer visualizer(&writer);

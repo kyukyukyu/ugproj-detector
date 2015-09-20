@@ -22,10 +22,16 @@ class FaceClusterer {
     // configuration for this object, and puts cluster labels on each face
     // tracklet based on voting result of faces in the tracklet. Face tracklets
     // that belongs to same cluster will have the same label.
-    void do_clustering(const cv::Mat& repr_faces_reduced,
+    void do_clustering(const cv::Mat& faces_reduced,
+                       const std::vector<FaceTracklet>& tracklets,
                        std::vector<int>* cluster_ids);
 
   private:
+    // Iterates over face tracklets and runs voting for cluster label of the
+    // tracklet.
+    void vote_for_labels(const std::vector<int>& labels_face,
+                         const std::vector<FaceTracklet>& tracklets,
+                         std::vector<int>* cluster_ids);
     // Configuration used for clustering.
     const Configuration* cfg_;
 };
