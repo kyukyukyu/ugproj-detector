@@ -15,7 +15,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  ugproj::FileInput input;
+  ugproj::TrackerFileInput input;
   ret = input.open(cfg);
   if (ret != 0) {
     return ret;

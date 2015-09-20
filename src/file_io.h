@@ -10,7 +10,24 @@
 
 namespace ugproj {
 
+// Virtual class which is responsible for loading required filepaths from
+// configuration and initializing related objects.
 class FileInput {
+  public:
+    // Loads required paths of files and/or directories from configuration
+    // object and initializes objects related to them. Returns 0 if successful,
+    // otherwise nonzero value.
+    virtual int open(const Configuration& cfg) = 0;
+};
+
+// Class which is responsible for file inputs used in tracker. First, loads
+// paths for these files from configuration:
+//
+// - Input video file
+// - Cascade classifier file
+//
+// Then, initializes objects related to each file.
+class TrackerFileInput : public FileInput {
   public:
     int open(const Configuration& cfg);
     cv::VideoCapture& video();

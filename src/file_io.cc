@@ -4,7 +4,7 @@ namespace fs = boost::filesystem;
 
 namespace ugproj {
 
-int FileInput::open(const Configuration& cfg) {
+int TrackerFileInput::open(const Configuration& cfg) {
   if (!this->video_.open(cfg.video_filepath.native())) {
     return 1;
   }
@@ -14,11 +14,11 @@ int FileInput::open(const Configuration& cfg) {
   return 0;
 }
 
-cv::VideoCapture& FileInput::video() {
+cv::VideoCapture& TrackerFileInput::video() {
   return this->video_;
 }
 
-cv::CascadeClassifier& FileInput::cascade() {
+cv::CascadeClassifier& TrackerFileInput::cascade() {
   return this->cascade_;
 }
 
