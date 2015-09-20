@@ -157,6 +157,8 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions,
   }
 
   delete prev_faces;
+  
+  ret = this->write_mapping_file(*tracked_positions);
 
   ret = this->write_tracklet_metadata(*tracklets,*tracked_positions);
   if(ret != 0)
@@ -483,6 +485,27 @@ int FaceTracker::write_tracklet(
   return this->writer_->write_image(img_tracklet, filename);
 }
 
+int FaceTracker::write_mapping_file(
+    const std::vector<unsigned long>& tracked_positions) {
+    
+  std::string output_path = this->writer_->get_output_path();
+  
+  char filename[256];
+  std::sprintf(filename, "%s/mapping.yaml",output_path.c_str());
+
+  cv::FileStorage fs(filename,cv::FileStorage::WRITE);
+  
+  fs << "frame_positions" << "[:";
+  int trackedCount = tracked_positions.size();
+  for(int i = 0;i<trackedCount;i++){
+      int temp = tracked_positions[i]; 
+      fs << temp;
+  }
+  fs << "]";
+  fs.release();
+
+  return 0;
+}    
 int FaceTracker::write_tracklet_metadata(
     const std::vector<FaceTracklet>& tracklets,
     const std::vector<unsigned long>& tracked_positions) {

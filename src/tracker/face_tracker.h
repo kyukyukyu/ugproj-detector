@@ -81,6 +81,7 @@ class FaceTracker {
                        const std::vector<unsigned long>& tracked_positions);
     int write_tracklet_metadata(const std::vector<FaceTracklet>& tracklets,
                        const std::vector<unsigned long>& tracked_positions);
+    int write_mapping_file(const std::vector<unsigned long>& tracked_positions);
     TrackerFileInput* input_;
     FileWriter* writer_;
     const Configuration* cfg_;
