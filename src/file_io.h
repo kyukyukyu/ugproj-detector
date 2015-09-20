@@ -64,6 +64,7 @@ class FileWriter {
   public:
     int init(const Configuration& cfg);
     int write_image(const cv::Mat& image, const std::string& filename) const;
+    std::string get_output_path();
     // Opens a video file to write with given key string and properties.
     // Returns non-zero value if the file is not opened correctly, otherwise 0.
     int open_video_file(

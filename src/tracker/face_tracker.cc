@@ -97,7 +97,7 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions,
       break;
     }
 
-    if(pos<300 || pos>500){
+    if(pos > 1500){
         pos++;
         continue;
     }
@@ -157,6 +157,10 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions,
   }
 
   delete prev_faces;
+
+  ret = this->write_tracklet_metadata(*tracklets,*tracked_positions);
+  if(ret != 0)
+      return ret;
 
   for (const FaceTracklet& f : *tracklets) {
     ret = this->write_tracklet(f, *tracked_positions);
@@ -471,25 +475,6 @@ int FaceTracker::write_tracklet(
     cv::Mat img_tracklet_roi(img_tracklet, roi);
     // Draw the image of face.
     f.resized_image(kSize).copyTo(img_tracklet_roi);
-    // Prepare the information of face.
-    char c_str_frame_pos[16];
-    std::sprintf(c_str_frame_pos, "%lu", tracked_positions[f.frameIndex]);
-    std::string str_frame_pos(c_str_frame_pos);
-    // Compute the position for the information text and box including it.
-    int baseline;
-    cv::Size text_size =
-        cv::getTextSize(str_frame_pos, cv::FONT_HERSHEY_PLAIN, 1.0, 1,
-                        &baseline);
-    const cv::Rect box_rec(kMarginTextbox, kMarginTextbox,
-                           2 * kMarginTextbox + text_size.width,
-                           2 * kMarginTextbox + text_size.height);
-    const cv::Point text_org(2 * kMarginTextbox,
-                             2 * kMarginTextbox + text_size.height);
-    // Draw the information text and box including it.
-    // The box should be drawn first.
-//    cv::rectangle(img_tracklet_roi, box_rec, kColorTextbox, CV_FILLED);
-//    cv::putText(img_tracklet_roi, str_frame_pos, text_org,
-//                cv::FONT_HERSHEY_PLAIN, 1.0, kColorText);
   }
   // Prepare the filename.
   char filename[256];
@@ -498,4 +483,36 @@ int FaceTracker::write_tracklet(
   return this->writer_->write_image(img_tracklet, filename);
 }
 
+int FaceTracker::write_tracklet_metadata(
+    const std::vector<FaceTracklet>& tracklets,
+    const std::vector<unsigned long>& tracked_positions) {
+  // TODO: Move this constant to class declaration.
+
+  std::string output_path = this->writer_->get_output_path();
+  
+  char filename[256];
+  std::sprintf(filename, "%s/tracklet.yaml",output_path.c_str());
+
+  cv::FileStorage fs(filename,cv::FileStorage::WRITE);
+
+  int trackletCount = tracklets.size();
+
+  fs << "trackletCount" << trackletCount;
+  fs << "tracklets" << "[";
+  for (const FaceTracklet& ft : tracklets) {
+    const auto iterators = ft.face_iterators();
+    fs << "{:" << "frame_indices" << "[:";
+    int i = 0;
+    for (auto it = iterators.first; it != iterators.second; ++it, ++i) {
+      const Face& f = *it;
+      int frameIndex = f.frameIndex;
+      fs << frameIndex;
+    }
+    fs << "]" << "}";
+  }
+  fs << "]";
+  fs.release();
+
+  return 0;
+}
 }  // namespace ugproj

@@ -53,6 +53,10 @@ int FileWriter::write_image(const cv::Mat& image,
   return 0;
 }
 
+std::string FileWriter::get_output_path(){
+  return this->output_path_.string();
+}
+
 int FileWriter::open_video_file(
     const std::string& key,
     const std::string& filename,
