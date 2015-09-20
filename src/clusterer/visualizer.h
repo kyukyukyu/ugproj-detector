@@ -22,13 +22,13 @@ class FaceClustersVisualizer {
     int visualize(const std::vector<unsigned long>& tracked_positions,
                   const std::vector<FaceTracklet>& labeled_faces,
                   const int n_clusters,
-                  const std::vector<tracklet_id_t>& cluster_ids);
+                  const std::vector<int>& cluster_ids);
 
   private:
     // Generates visualization for single cluster and writes it to file.
     int visualize_single(const std::vector<unsigned long>& tracked_positions,
                          const std::vector<FaceTracklet>& faces,
-                         tracklet_id_t cluster_id);
+                         int cluster_id);
     // File writer for this object.
     FileWriter* writer_;
 };

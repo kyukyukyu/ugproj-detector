@@ -14,7 +14,7 @@ FaceTracker::FaceTracker() {
   this->cfg_ = NULL;
 }
 
-int FaceTracker::set_input(FileInput* input) {
+int FaceTracker::set_input(TrackerFileInput* input) {
   this->input_ = input;
   return 0;
 }

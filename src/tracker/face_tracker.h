@@ -11,7 +11,7 @@ namespace ugproj {
 class FaceTracker {
   public:
     FaceTracker();
-    int set_input(FileInput* input);
+    int set_input(TrackerFileInput* input);
     int set_writer(FileWriter* writer);
     int set_cfg(const Configuration* cfg);
     int track(std::vector<unsigned long>* tracked_positions,
@@ -79,7 +79,7 @@ class FaceTracker {
     // positions should be given.
     int write_tracklet(const FaceTracklet& tracklet,
                        const std::vector<unsigned long>& tracked_positions);
-    FileInput* input_;
+    TrackerFileInput* input_;
     FileWriter* writer_;
     const Configuration* cfg_;
 };
