@@ -97,6 +97,11 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions,
       break;
     }
 
+    if(pos<300 || pos>500){
+        pos++;
+        continue;
+    }
+
     // If target fps is set to zero, every frame will be tracked.
     const double target_fps = this->cfg_ ? this->cfg_->scan.target_fps : 0.0;
     const double mod = target_fps == 0.0 ?
@@ -482,13 +487,13 @@ int FaceTracker::write_tracklet(
                              2 * kMarginTextbox + text_size.height);
     // Draw the information text and box including it.
     // The box should be drawn first.
-    cv::rectangle(img_tracklet_roi, box_rec, kColorTextbox, CV_FILLED);
-    cv::putText(img_tracklet_roi, str_frame_pos, text_org,
-                cv::FONT_HERSHEY_PLAIN, 1.0, kColorText);
+//    cv::rectangle(img_tracklet_roi, box_rec, kColorTextbox, CV_FILLED);
+//    cv::putText(img_tracklet_roi, str_frame_pos, text_org,
+//                cv::FONT_HERSHEY_PLAIN, 1.0, kColorText);
   }
   // Prepare the filename.
   char filename[256];
-  std::sprintf(filename, "face_%d.png", tracklet.id);
+  std::sprintf(filename, "tracklet_%d.png", tracklet.id);
   // Write to file.
   return this->writer_->write_image(img_tracklet, filename);
 }

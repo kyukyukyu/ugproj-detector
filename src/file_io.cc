@@ -22,6 +22,19 @@ cv::CascadeClassifier& TrackerFileInput::cascade() {
   return this->cascade_;
 }
 
+int ClustererFileInput::open(const Configuration& cfg) {
+  // Load from input-dir
+  return 0;
+}
+
+const std::vector<unsigned long>& ClustererFileInput::tracked_positions() const{
+  return this->tracked_positions_;
+}
+
+const std::vector<ugproj::FaceTracklet>& ClustererFileInput::tracklets() const{
+  return this->tracklets_;
+}
+
 int FileWriter::init(const Configuration& cfg) {
   this->output_path_ = cfg.output_dirpath;
   if (!fs::is_directory(this->output_path_) &&

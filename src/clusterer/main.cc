@@ -43,6 +43,7 @@ int main(int argc, const char** argv) {
     // face #1, face #2, and face #3 in order, from the first row.
     cv::Mat faces_reduced;
 
+    /*
     // TODO: Make clusterer accept tracklet information and assign a cluster
     // label to each tracklet by voting.
     //
@@ -58,6 +59,7 @@ int main(int argc, const char** argv) {
     ugproj::FaceClustersVisualizer visualizer(&writer);
     visualizer.visualize(tracked_positions, tracklets,
                          cfg.clustering.k, cluster_ids);
+     */
   } catch (std::exception&) {
     return 1;
   }
