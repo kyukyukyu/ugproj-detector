@@ -5,9 +5,9 @@
 
 namespace ugproj {
 
-// Does clustering on vectors that represent face tracklets according to
-// configuration, and puts labels on each vector so that which tracklets belong
-// to which face group is known.
+// Does clustering on vectors that represent faces according to configuration,
+// and puts cluster label on each face tracklet based on voting result of faces
+// in the tracklet.
 //
 // Setting Configuration object is required to load configuration for
 // clustering.
@@ -18,11 +18,10 @@ class FaceClusterer {
     explicit FaceClusterer(const Configuration& cfg);
     // Sets Configuration object for this object.
     void set_cfg(const Configuration& cfg);
-    // Does clustering on vectors that represent face tracklets according to
-    // configuration for this object, and puts labels on each vector. Vectors
-    // that inside same cluster are put same label.
-    // If file writer is set for this object, visualization of clustering
-    // result will be written in image files as described above.
+    // Does clustering on vectors that represent faces according to
+    // configuration for this object, and puts cluster labels on each face
+    // tracklet based on voting result of faces in the tracklet. Face tracklets
+    // that belongs to same cluster will have the same label.
     void do_clustering(const cv::Mat& repr_faces_reduced,
                        std::vector<int>* cluster_ids);
 
