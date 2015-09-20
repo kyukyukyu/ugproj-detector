@@ -43,7 +43,7 @@ int main(int argc, const char** argv) {
     // Assigned to: kyukyukyu
 
     // List of cluster IDs for face tracklets.
-    std::vector<ugproj::tracklet_id_t> cluster_ids;
+    std::vector<int> cluster_ids;
     // Clusterer object for representative faces of tracklets.
     ugproj::FaceClusterer clusterer(cfg);
     clusterer.do_clustering(repr_faces_reduced, &cluster_ids);

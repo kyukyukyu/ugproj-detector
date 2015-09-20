@@ -10,7 +10,7 @@ int FaceClustersVisualizer::visualize(
     const std::vector<unsigned long>& tracked_positions,
     const std::vector<FaceTracklet>& labeled_faces,
     const int n_clusters,
-    const std::vector<tracklet_id_t>& cluster_ids) {
+    const std::vector<int>& cluster_ids) {
   int ret = 0;
   std::vector< std::vector<FaceTracklet> > clusters;
   clusters.reserve(n_clusters);
@@ -32,7 +32,7 @@ int FaceClustersVisualizer::visualize(
 int FaceClustersVisualizer::visualize_single(
     const std::vector<unsigned long>& tracked_positions,
     const std::vector<FaceTracklet>& faces,
-    tracklet_id_t cluster_id) {
+    int cluster_id) {
   // TODO: Get rid of duplicates on code.
   // TODO: Move this constant to class declaration.
   static const int kSize = 64;
