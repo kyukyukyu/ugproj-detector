@@ -7,7 +7,7 @@ int main(int argc, const char** argv) {
   try {
     ugproj::Configuration cfg;
     if (cfg.load(argc, argv)) {
-      throw new std::exception();
+      return 1;
     }
 
     ugproj::FileWriter writer;

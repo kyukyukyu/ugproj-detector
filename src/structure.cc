@@ -39,9 +39,10 @@ int Configuration::load(int argc, const char** argv) {
   namespace po = boost::program_options;
 
   try {
-    po::options_description generic_options("Generic options");
+    po::options_description tracker_options("Tracker options");
+    po::options_description clusterer_options("Clusterer options");
     po::options_description config_options("Configuration");
-    generic_options.add_options()
+    tracker_options.add_options()
       ("help", "produce help message.")
       ("config-file,c",
        po::value<std::string>()
@@ -53,6 +54,34 @@ int Configuration::load(int argc, const char** argv) {
          ->value_name("video_filepath")
          ->required(),
        "path to input video file.")
+      ("output-dir,o",
+       po::value<std::string>()
+         ->value_name("output_dir")
+         ->default_value("output"),
+       "path to output directory.")
+    ;
+    clusterer_options.add_options()
+      ("help", "produce help message.")
+      ("config-file,c",
+       po::value<std::string>()
+         ->value_name("config_filepath")
+         ->required(),
+       "path to config file.")
+      ("metadata-file,m",
+       po::value<std::string>()
+         ->value_name("metadata_filepath")
+         ->required(),
+       "path to metadata file.")
+      ("mapping-file,p",
+       po::value<std::string>()
+         ->value_name("mapping_filepath")
+         ->required(),
+       "path to mapping file.")
+      ("input-dir,i",
+       po::value<std::string>()
+         ->value_name("input_dir")
+         ->required(),
+       "path to input directory.")
       ("output-dir,o",
        po::value<std::string>()
          ->value_name("output_dir")
@@ -172,8 +201,11 @@ int Configuration::load(int argc, const char** argv) {
     ;
 
     po::options_description visible_options("Allowed options");
-    visible_options.add(generic_options);
-
+    if(!std::string("./tracker").compare(argv[0])){
+      visible_options.add(tracker_options);
+    }else if(!std::string("./clusterer").compare(argv[0])){
+      visible_options.add(clusterer_options);
+    }
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, visible_options), vm);
     if (vm.count("help")) {
@@ -183,7 +215,13 @@ int Configuration::load(int argc, const char** argv) {
     po::notify(vm);
 
     // Resolve path options from command line into path objects.
-    this->video_filepath = vm["video-file"].as<std::string>();
+    if(!std::string("./tracker").compare(argv[0])){
+      this->video_filepath = vm["video-file"].as<std::string>();
+    }else if(!std::string("./clusterer").compare(argv[0])){
+      this->metadata_filepath = vm["metadata-file"].as<std::string>();
+      this->mapping_filepath = vm["mapping-file"].as<std::string>();
+      this->input_dirpath = vm["input-dir"].as<std::string>();
+    }
     this->output_dirpath = vm["output-dir"].as<std::string>();
     boost::filesystem::path config_filepath =
         vm["config-file"].as<std::string>();
