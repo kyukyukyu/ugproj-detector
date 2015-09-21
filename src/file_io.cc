@@ -1,4 +1,5 @@
 #include "file_io.h"
+#include <opencv2/highgui/highgui.hpp>
 
 namespace fs = boost::filesystem;
 
@@ -23,7 +24,56 @@ cv::CascadeClassifier& TrackerFileInput::cascade() {
 }
 
 int ClustererFileInput::open(const Configuration& cfg) {
-  // Load from input-dir
+  // Parsing metadata file and mapping file to tracklet and tracked_positions
+  
+  char metadataFilename[256];
+  std::sprintf(metadataFilename,"%s",cfg.metadata_filepath.string().c_str());
+
+  cv::FileStorage fs(metadataFilename,cv::FileStorage::READ);
+  
+  int trackletCount = (int)fs["trackletCount"];
+
+  cv::FileNode tracklets = fs["tracklets"];
+  cv::FileNodeIterator it = tracklets.begin(), it_end = tracklets.end();
+  std::vector<int> frame_indices;
+   
+  for(int i = 1;it != it_end;++it,i++){
+      
+      this->tracklets_.push_back(ugproj::FaceTracklet(i-1));
+      
+      std::string trackletFilename = cfg.input_dirpath.string();
+      trackletFilename += "tracklet_";
+      trackletFilename += std::to_string(i);
+      trackletFilename += ".png";
+
+      cv::Mat trackletMat = cv::imread(trackletFilename,CV_LOAD_IMAGE_COLOR);
+      
+      if(!trackletMat.data){
+          std::printf("Could not open or find the image\n");
+        return -1;
+      }
+
+      (*it)["frame_indices"] >> frame_indices;
+
+      static const int kSize = 64;
+      static const int kNCols = 16;
+
+      for(int j=0;j<(int)frame_indices.size();j++){
+        const cv::Rect roi((j % kNCols) * kSize, (j / kNCols) * kSize,
+                          kSize, kSize);
+
+        cv::Mat cropped = trackletMat(roi);
+     
+        ugproj::Face newFace(frame_indices[j-1],cropped,i);
+        this->tracklets_[i-1].add_face(newFace);
+      }
+
+      const auto iterators = this->tracklets_[i-1].face_iterators();
+      for(auto it = iterators.first; it != iterators.second; ++it){
+        const ugproj::Face& f = *it;
+      }
+  }
+
   return 0;
 }
 

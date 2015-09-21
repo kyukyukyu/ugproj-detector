@@ -140,6 +140,9 @@ class Face {
     Face(const temp_idx_t frameIndex, const cv::Rect& rect,
                   const cv::Mat& image) :
         frameIndex(frameIndex), rect(rect), image(image), tracklet_id(0) {};
+    Face(const temp_idx_t frameIndex, const cv::Mat& image,
+                  const tracklet_id_t tracklet_id) :
+        frameIndex(frameIndex), image(image), tracklet_id(tracklet_id) {};
     Face(const Face& f) {
       this->frameIndex = f.frameIndex;
       this->rect = f.rect;
