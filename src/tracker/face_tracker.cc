@@ -494,7 +494,6 @@ int FaceTracker::write_mapping_file(
   std::sprintf(filename, "%s/mapping.yaml",output_path.c_str());
 
   cv::FileStorage fs(filename,cv::FileStorage::WRITE);
-  
   fs << "frame_positions" << "[:";
   int trackedCount = tracked_positions.size();
   for(int i = 0;i<trackedCount;i++){

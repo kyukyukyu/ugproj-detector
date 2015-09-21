@@ -24,19 +24,35 @@ cv::CascadeClassifier& TrackerFileInput::cascade() {
 
 int ClustererFileInput::open(const Configuration& cfg) {
   // Parsing metadata file and mapping file to tracklet and tracked_positions
-  
+
+  // mapping file parsing to tracked_positions_
+  char mappingFilename[256];
+  std::sprintf(mappingFilename,"%s",cfg.mapping_filepath.string().c_str());
+
+  cv::FileStorage mapfs(mappingFilename,cv::FileStorage::READ);
+
+  std::vector<int> frame_positions;
+  mapfs["frame_positions"] >> frame_positions;
+
+  std::printf("frame_positions size %d\n",(int)frame_positions.size());
+  for(int i = 0;i<(int)frame_positions.size();i++){
+      this->tracked_positions_.push_back(frame_positions[i]);
+  }
+//  mapfs.release();
+
+  // metadata and tracklet Image parsing to tracklets_
   char metadataFilename[256];
   std::sprintf(metadataFilename,"%s",cfg.metadata_filepath.string().c_str());
 
-  cv::FileStorage fs(metadataFilename,cv::FileStorage::READ);
+  cv::FileStorage metafs(metadataFilename,cv::FileStorage::READ);
   
-  int trackletCount = (int)fs["trackletCount"];
+  int trackletCount = (int)metafs["trackletCount"];
 
-  cv::FileNode tracklets = fs["tracklets"];
-  cv::FileNodeIterator it = tracklets.begin(), it_end = tracklets.end();
+  cv::FileNode tracklets = metafs["tracklets"];
+  cv::FileNodeIterator it2 = tracklets.begin(), it_end2 = tracklets.end();
   std::vector<int> frame_indices;
    
-  for(int i = 1;it != it_end;++it,i++){
+  for(int i = 1;it2 != it_end2;++it2,i++){
       
       this->tracklets_.push_back(ugproj::FaceTracklet(i-1));
       
@@ -52,7 +68,7 @@ int ClustererFileInput::open(const Configuration& cfg) {
         return -1;
       }
 
-      (*it)["frame_indices"] >> frame_indices;
+      (*it2)["frame_indices"] >> frame_indices;
 
       static const int kSize = 64;
       static const int kNCols = 16;
@@ -72,6 +88,8 @@ int ClustererFileInput::open(const Configuration& cfg) {
         const ugproj::Face& f = *it;
       }
   }
+
+  metafs.release();
 
   return 0;
 }
