@@ -151,6 +151,7 @@ class Face {
       this->fitted = f.fitted;
     }
     cv::Mat resized_image(int size) const;
+    cv::Mat get_image() const;
 };
 
 class FaceTracklet {

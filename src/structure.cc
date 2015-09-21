@@ -27,6 +27,10 @@ cv::Mat Face::resized_image(int size) const {
   return resized;
 }
 
+cv::Mat Face::get_image() const{
+  return this->image;
+}
+
 FaceTracklet::FaceTracklet(id_type id, const Face& f) : id(id) {
   add_face(f);
 }

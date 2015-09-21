@@ -23,20 +23,27 @@ void FaceClusterer::do_clustering(const cv::Mat& faces_reduced,
   const auto& cfg_cl = this->cfg_->clustering;
   // List of cluster labels for faces in tracklets. Will be populated by
   // k-means clustering.
-  std::vector<int> labels_face;
+  std::vector<int>* labels_face;
+
   // Run k-means clustering provided by OpenCV.
+  std::printf("before kmeans\n");
   compactness = cv::kmeans(faces_reduced, cfg_cl.k, *cluster_ids,
                            cfg_cl.term_crit, cfg_cl.attempts,
                            cv::KMEANS_PP_CENTERS);
+  
+  std::printf("labels face size \n");
+  
   // Put cluster labels on face tracklets.
-  this->vote_for_labels(labels_face, tracklets, cluster_ids);
+ // this->vote_for_labels(*labels_face, tracklets, cluster_ids);
 }
 
 void FaceClusterer::vote_for_labels(const std::vector<int>& labels_face,
                                     const std::vector<FaceTracklet>& tracklets,
                                     std::vector<int>* cluster_ids) {
   auto it_label_face = labels_face.cbegin();
+  std::printf("label face size %d\n",(int)labels_face.size());
   int idx_tracklet = 0;
+  std::printf("tracklet size %d\n",(int)tracklets.size());
   for (const auto& tracklet : tracklets) {
     // Pair of iterators pointing the start and the end of faces in the
     // tracklet.
@@ -49,9 +56,13 @@ void FaceClusterer::vote_for_labels(const std::vector<int>& labels_face,
     // Counters for cluster labels.
     std::vector<int> counters(n_clusters, 0);
 
+  std::printf("before vote\n");
     // Vote for cluster label of the tracklet.
     for (int i = 0; i < n_faces; ++i) {
+  std::printf("before label\n");
       const auto label = *it_label_face;
+  std::printf("after label\n");
+
       ++counters[label];
       ++it_label_face;
     }

@@ -38,7 +38,7 @@ int ClustererFileInput::open(const Configuration& cfg) {
   for(int i = 0;i<(int)frame_positions.size();i++){
       this->tracked_positions_.push_back(frame_positions[i]);
   }
-//  mapfs.release();
+  mapfs.release();
 
   // metadata and tracklet Image parsing to tracklets_
   char metadataFilename[256];
