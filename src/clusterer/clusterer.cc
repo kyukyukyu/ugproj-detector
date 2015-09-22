@@ -30,9 +30,9 @@ void FaceClusterer::do_clustering(const cv::Mat& faces_reduced,
   compactness = cv::kmeans(faces_reduced, cfg_cl.k, *cluster_ids,
                            cfg_cl.term_crit, cfg_cl.attempts,
                            cv::KMEANS_PP_CENTERS);
-  
+
   std::printf("labels face size \n");
-  
+
   // Put cluster labels on face tracklets.
  // this->vote_for_labels(*labels_face, tracklets, cluster_ids);
 }

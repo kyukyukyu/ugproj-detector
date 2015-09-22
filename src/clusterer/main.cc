@@ -53,7 +53,7 @@ int main(int argc, const char** argv) {
     // Assigned to: Naing0126
 
     std::vector<cv::Mat> faceSet;
-    
+
     // Change to grey scale image
     for(ugproj::FaceTracklet tracklet : tracklets){
       const auto iterators = tracklet.face_iterators();
@@ -62,7 +62,7 @@ int main(int argc, const char** argv) {
         cv::Mat greyFace, colorFace;
         colorFace = f.get_image();
         cv::cvtColor(colorFace, greyFace, CV_BGR2GRAY);
-        
+
         faceSet.push_back(greyFace);
       }
     }

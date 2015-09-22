@@ -45,24 +45,24 @@ int ClustererFileInput::open(const Configuration& cfg) {
   std::sprintf(metadataFilename,"%s",cfg.metadata_filepath.string().c_str());
 
   cv::FileStorage metafs(metadataFilename,cv::FileStorage::READ);
-  
+
   int trackletCount = (int)metafs["trackletCount"];
 
   cv::FileNode tracklets = metafs["tracklets"];
   cv::FileNodeIterator it2 = tracklets.begin(), it_end2 = tracklets.end();
   std::vector<int> frame_indices;
-   
+
   for(int i = 1;it2 != it_end2;++it2,i++){
-      
+
       this->tracklets_.push_back(ugproj::FaceTracklet(i-1));
-      
+
       std::string trackletFilename = cfg.input_dirpath.string();
       trackletFilename += "tracklet_";
       trackletFilename += std::to_string(i);
       trackletFilename += ".png";
 
       cv::Mat trackletMat = cv::imread(trackletFilename,CV_LOAD_IMAGE_COLOR);
-      
+
       if(!trackletMat.data){
           std::printf("Could not open or find the image\n");
         return -1;
