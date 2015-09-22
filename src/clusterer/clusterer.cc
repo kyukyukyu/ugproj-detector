@@ -42,8 +42,12 @@ void FaceClusterer::vote_for_labels(const std::vector<int>& labels_face,
                                     std::vector<int>* cluster_ids) {
   auto it_label_face = labels_face.cbegin();
   std::printf("label face size %d\n",(int)labels_face.size());
-  int idx_tracklet = 0;
   std::printf("tracklet size %d\n",(int)tracklets.size());
+  // Clear the vector object pointed by cluster_ids and reserve space for new
+  // elements.
+  cluster_ids->clear();
+  cluster_ids->reserve(tracklets.size());
+
   for (const auto& tracklet : tracklets) {
     // Pair of iterators pointing the start and the end of faces in the
     // tracklet.
@@ -78,9 +82,7 @@ void FaceClusterer::vote_for_labels(const std::vector<int>& labels_face,
         max_cluster_id = i;
       }
     }
-    (*cluster_ids)[idx_tracklet] = max_cluster_id;
-
-    ++idx_tracklet;
+    cluster_ids->push_back(max_cluster_id);
   }
 }
 
