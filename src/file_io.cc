@@ -78,8 +78,8 @@ int ClustererFileInput::open(const Configuration& cfg) {
                           kSize, kSize);
 
         cv::Mat cropped = trackletMat(roi);
-     
-        ugproj::Face newFace(frame_indices[j-1],cropped,i);
+
+        ugproj::Face newFace(frame_indices[j],cropped,i);
         this->tracklets_[i-1].add_face(newFace);
       }
 
