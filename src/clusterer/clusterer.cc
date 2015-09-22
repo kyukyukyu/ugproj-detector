@@ -23,18 +23,18 @@ void FaceClusterer::do_clustering(const cv::Mat& faces_reduced,
   const auto& cfg_cl = this->cfg_->clustering;
   // List of cluster labels for faces in tracklets. Will be populated by
   // k-means clustering.
-  std::vector<int>* labels_face;
+  std::vector<int> labels_face;
 
   // Run k-means clustering provided by OpenCV.
   std::printf("before kmeans\n");
-  compactness = cv::kmeans(faces_reduced, cfg_cl.k, *cluster_ids,
+  compactness = cv::kmeans(faces_reduced, cfg_cl.k, labels_face,
                            cfg_cl.term_crit, cfg_cl.attempts,
                            cv::KMEANS_PP_CENTERS);
 
   std::printf("labels face size \n");
 
   // Put cluster labels on face tracklets.
- // this->vote_for_labels(*labels_face, tracklets, cluster_ids);
+  this->vote_for_labels(labels_face, tracklets, cluster_ids);
 }
 
 void FaceClusterer::vote_for_labels(const std::vector<int>& labels_face,

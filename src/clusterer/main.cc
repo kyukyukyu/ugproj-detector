@@ -123,8 +123,7 @@ int main(int argc, const char** argv) {
     ugproj::FaceClustersVisualizer visualizer(&writer);
     visualizer.visualize(tracked_positions, tracklets,
                          cfg.clustering.k, cluster_ids);
-  
-  } catch (std::exception&) {
+  } catch (std::exception*) {
     return 1;
   }
   return 0;
