@@ -12,8 +12,7 @@ int FaceClustersVisualizer::visualize(
     const int n_clusters,
     const std::vector<int>& cluster_ids) {
   int ret = 0;
-  std::vector< std::vector<FaceTracklet> > clusters;
-  clusters.reserve(n_clusters);
+  std::vector< std::vector<FaceTracklet> > clusters(n_clusters);
   for (unsigned long i = 0, n = labeled_faces.size(); i < n; ++i) {
     tracklet_id_t cluster_id = cluster_ids[i];
     const FaceTracklet& tracklet = labeled_faces[i];
@@ -59,7 +58,7 @@ int FaceClustersVisualizer::visualize_single(
                          kSize, kSize);
       cv::Mat visualized_roi(visualized, roi);
       // Draw the image of face.
-      f.resized_image(kSize).copyTo(visualized_roi);
+      f.image.copyTo(visualized_roi);
       // Prepare the information of face.
       char c_str_frame_pos[16];
       std::sprintf(c_str_frame_pos, "%lu", tracked_positions[f.frameIndex]);
