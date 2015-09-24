@@ -103,7 +103,7 @@ int main(int argc, const char** argv) {
     // repr_faces_reduced should have dimensionality-reduced vector for
     // face #1, face #2, and face #3 in order, from the first row.
     cv::Mat faces_reduced;
-    cv::PCA pca(faces, cv::noArray(), CV_PCA_DATA_AS_ROW, 2);
+    cv::PCA pca(faces, cv::noArray(), CV_PCA_DATA_AS_ROW, 64);
     faces_reduced = pca.project(faces);
 
     std::cout << faces_reduced.size() << std::endl;
