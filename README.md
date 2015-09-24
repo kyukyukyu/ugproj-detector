@@ -9,6 +9,7 @@
     - program\_options
     - system
 - [Eigen](http://eigen.tuxfamily.org/) 3
+- [OpenCV](http://opencv.org/) >=2.4.9, <3.0
 
 ## How to Build
 
