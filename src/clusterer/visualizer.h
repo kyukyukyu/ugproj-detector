@@ -10,9 +10,10 @@ namespace ugproj {
 // images to files. A FileWriter object is required for file output.
 class FaceClustersVisualizer {
   public:
-    // Constructor. writer is a pointer to FileWriter object for the
-    // constructed object. This MUST be not NULL.
-    FaceClustersVisualizer(FileWriter* writer);
+    // Constructor. cfg is the configuration object for this program. writer is
+    // a pointer to FileWriter object for the constructed object. This MUST be
+    // not NULL.
+    FaceClustersVisualizer(const Configuration& cfg, FileWriter* writer);
     // Visualizes the result of face clustering and writes it to multiple image
     // files. tracked_positions is the list of tracked frame positions.
     // labeled_faces is the list of face tracklets. n_clusters is the number of
@@ -29,6 +30,8 @@ class FaceClustersVisualizer {
     int visualize_single(const std::vector<unsigned long>& tracked_positions,
                          const std::vector<FaceTracklet>& faces,
                          int cluster_id);
+    // Configuration for output.
+    const Configuration::OutputSection& cfg_output_;
     // File writer for this object.
     FileWriter* writer_;
 };

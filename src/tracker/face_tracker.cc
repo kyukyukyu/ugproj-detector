@@ -1,7 +1,9 @@
-#include "associator.h"
 #include "face_tracker.h"
 
 #include <cstdio>
+
+#include "../visualizer.h"
+#include "associator.h"
 
 namespace ugproj {
 
@@ -452,27 +454,12 @@ void FaceTracker::run_lk(const cv::Mat& prev_gray,
 int FaceTracker::write_tracklet(
     const FaceTracklet& tracklet,
     const std::vector<unsigned long>& tracked_positions) {
-  // TODO: Move this constant to class declaration.
-  static const int kSize = 64;
-  static const int kNCols = 16;
-  static const cv::Scalar kColorText = CV_RGB(255, 255, 255);
-  static const cv::Scalar kColorTextbox = CV_RGB(0, 0, 0);
-  static const int kMarginTextbox = 4;
-  // Draw tracklet.
-  const auto iterators = tracklet.face_iterators();
-  const int n_faces = iterators.second - iterators.first;
-  const int n_rows = n_faces / kNCols + !!(n_faces % kNCols);
-  cv::Mat img_tracklet(n_rows * kSize, kNCols * kSize, CV_8UC3);
-  img_tracklet = CV_RGB(255, 255, 255);
-  int i = 0;
-  for (auto it = iterators.first; it != iterators.second; ++it, ++i) {
-    const Face& f = *it;
-    const cv::Rect roi((i % kNCols) * kSize, (i / kNCols) * kSize,
-                       kSize, kSize);
-    cv::Mat img_tracklet_roi(img_tracklet, roi);
-    // Draw the image of face.
-    f.resized_image(kSize).copyTo(img_tracklet_roi);
-  }
+  std::vector< FaceRange<FaceList::const_iterator> > face_ranges;
+  face_ranges.push_back(tracklet.face_iterators());
+  const auto& cfg_output = this->cfg_->output;
+  const auto& img_tracklet =
+      visualize_faces(face_ranges.cbegin(), face_ranges.cend(),
+                      cfg_output.face_size, cfg_output.n_cols_tracklet);
   // Prepare the filename.
   char filename[256];
   std::sprintf(filename, "tracklet_%d.png", tracklet.id);

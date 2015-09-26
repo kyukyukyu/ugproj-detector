@@ -1,8 +1,12 @@
 #include "visualizer.h"
 
+#include "../visualizer.h"
+
 namespace ugproj {
 
-FaceClustersVisualizer::FaceClustersVisualizer(FileWriter* writer) {
+FaceClustersVisualizer::FaceClustersVisualizer(
+    const Configuration& cfg,
+    FileWriter* writer) : cfg_output_(cfg.output) {
   this->writer_ = writer;
 }
 
@@ -30,56 +34,17 @@ int FaceClustersVisualizer::visualize(
 
 int FaceClustersVisualizer::visualize_single(
     const std::vector<unsigned long>& tracked_positions,
-    const std::vector<FaceTracklet>& faces,
+    const std::vector<FaceTracklet>& tracklets,
     int cluster_id) {
-  // TODO: Get rid of duplicates on code.
-  // TODO: Move this constant to class declaration.
-  static const int kSize = 64;
-  static const int kNCols = 16;
-  static const cv::Scalar kColorText = CV_RGB(255, 255, 255);
-  static const cv::Scalar kColorTextbox = CV_RGB(0, 0, 0);
-  static const int kMarginTextbox = 4;
-  // Count number of faces to be drawn.
-  int n_faces = 0;
-  for (const auto& tracklet : faces) {
-    const auto iterators = tracklet.face_iterators();
-    n_faces += iterators.second - iterators.first;
+  std::vector< FaceRange<FaceList::const_iterator> > face_ranges;
+  for (const auto& tracklet : tracklets) {
+    face_ranges.push_back(tracklet.face_iterators());
   }
-  // Draw tracklet.
-  const int n_rows = n_faces / kNCols + !!(n_faces % kNCols);
-  cv::Mat visualized(n_rows * kSize, kNCols * kSize, CV_8UC3);
-  visualized = CV_RGB(255, 255, 255);
-  int i = 0;
-  for (const auto& tracklet : faces) {
-    const auto iterators = tracklet.face_iterators();
-    for (auto it = iterators.first; it != iterators.second; ++it, ++i) {
-      const Face& f = *it;
-      const cv::Rect roi((i % kNCols) * kSize, (i / kNCols) * kSize,
-                         kSize, kSize);
-      cv::Mat visualized_roi(visualized, roi);
-      // Draw the image of face.
-      f.image.copyTo(visualized_roi);
-      // Prepare the information of face.
-      char c_str_frame_pos[16];
-      std::sprintf(c_str_frame_pos, "%lu", tracked_positions[f.frameIndex]);
-      std::string str_frame_pos(c_str_frame_pos);
-      // Compute the position for the information text and box including it.
-      int baseline;
-      cv::Size text_size =
-          cv::getTextSize(str_frame_pos, cv::FONT_HERSHEY_PLAIN, 1.0, 1,
-                          &baseline);
-      const cv::Rect box_rec(kMarginTextbox, kMarginTextbox,
-                             2 * kMarginTextbox + text_size.width,
-                             2 * kMarginTextbox + text_size.height);
-      const cv::Point text_org(2 * kMarginTextbox,
-                               2 * kMarginTextbox + text_size.height);
-      // Draw the information text and box including it.
-      // The box should be drawn first.
-      cv::rectangle(visualized_roi, box_rec, kColorTextbox, CV_FILLED);
-      cv::putText(visualized_roi, str_frame_pos, text_org,
-                  cv::FONT_HERSHEY_PLAIN, 1.0, kColorText);
-    }
-  }
+  const auto& cfg_output = this->cfg_output_;
+  const auto& visualized =
+      visualize_faces(face_ranges.cbegin(), face_ranges.cend(),
+                      cfg_output.face_size, cfg_output.n_cols_tracklet,
+                      tracked_positions);
   // Prepare the filename.
   char filename[256];
   std::sprintf(filename, "cluster_%d.png", cluster_id);

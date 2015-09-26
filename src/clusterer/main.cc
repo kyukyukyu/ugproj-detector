@@ -120,7 +120,7 @@ int main(int argc, const char** argv) {
     clusterer.do_clustering(faces_reduced, tracklets, &cluster_ids);
 
     // Writes the visualization of result of clustering to multiple files.
-    ugproj::FaceClustersVisualizer visualizer(&writer);
+    ugproj::FaceClustersVisualizer visualizer(cfg, &writer);
     visualizer.visualize(tracked_positions, tracklets,
                          cfg.clustering.k, cluster_ids);
   } catch (std::exception*) {
