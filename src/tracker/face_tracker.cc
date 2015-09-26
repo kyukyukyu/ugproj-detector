@@ -162,7 +162,7 @@ int FaceTracker::track(std::vector<unsigned long>* tracked_positions,
       return ret;
 
   for (const FaceTracklet& f : *tracklets) {
-    ret = this->write_tracklet(f, *tracked_positions);
+    ret = this->write_tracklet(f);
     if (ret != 0) {
       break;
     }
@@ -451,9 +451,7 @@ void FaceTracker::run_lk(const cv::Mat& prev_gray,
   }
 }
 
-int FaceTracker::write_tracklet(
-    const FaceTracklet& tracklet,
-    const std::vector<unsigned long>& tracked_positions) {
+int FaceTracker::write_tracklet(const FaceTracklet& tracklet) {
   std::vector< FaceRange<FaceList::const_iterator> > face_ranges;
   face_ranges.push_back(tracklet.face_iterators());
   const auto& cfg_output = this->cfg_->output;
