@@ -6,7 +6,7 @@ namespace ugproj {
 
 cv::Mat Face::resized_image(int size) const {
   cv::Mat resized;
-  const cv::Size& orig_size = this->rect.size();
+  const cv::Size& orig_size = this->image.size();
   double f;
   if (orig_size.width >= orig_size.height) {
     f = (double) size / (double) orig_size.height;
