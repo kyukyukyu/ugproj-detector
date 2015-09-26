@@ -116,10 +116,7 @@ struct Configuration {
   // loading, otherwise nonzero value.
   int load(int argc, const char** argv);
   boost::filesystem::path video_filepath;
-  boost::filesystem::path metadata_filepath;
-  boost::filesystem::path mapping_filepath;
   boost::filesystem::path output_dirpath;
-  boost::filesystem::path input_dirpath;
   ScanSection scan;
   DetectionSection detection;
   GfttSection gftt;

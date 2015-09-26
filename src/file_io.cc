@@ -23,72 +23,74 @@ cv::CascadeClassifier& TrackerFileInput::cascade() {
 }
 
 int ClustererFileInput::open(const Configuration& cfg) {
-  // Parsing metadata file and mapping file to tracklet and tracked_positions
+  const boost::filesystem::path& output_dirpath = cfg.output_dirpath;
+  // Load mapping file and parse the data into the mapping between frame
+  // indices and frame positions.
+  boost::filesystem::path mapping_filepath = output_dirpath / "mapping.yaml";
+  cv::FileStorage mapfs(mapping_filepath.native(), cv::FileStorage::READ);
 
-  // mapping file parsing to tracked_positions_
-  char mappingFilename[256];
-  std::sprintf(mappingFilename,"%s",cfg.mapping_filepath.string().c_str());
-
-  cv::FileStorage mapfs(mappingFilename,cv::FileStorage::READ);
-
+  // Since FileNode from OpenCV does not support parsing numbers into unsigned
+  // long type, temporary variable is required so that numbers can be casted
+  // manually.
   std::vector<int> frame_positions;
   mapfs["frame_positions"] >> frame_positions;
-
-  std::printf("frame_positions size %d\n",(int)frame_positions.size());
-  for(int i = 0;i<(int)frame_positions.size();i++){
-      this->tracked_positions_.push_back(frame_positions[i]);
+  this->tracked_positions_.reserve(frame_positions.size());
+  for (const auto& pos : frame_positions) {
+    this->tracked_positions_.push_back(pos);
   }
+
+  // Now done with mapping file.
   mapfs.release();
 
-  // metadata and tracklet Image parsing to tracklets_
-  char metadataFilename[256];
-  std::sprintf(metadataFilename,"%s",cfg.metadata_filepath.string().c_str());
+  // Load tracklet metadata file and tracklet image files, then parse the data
+  // into face tracklet objects.
+  boost::filesystem::path metadata_filepath = output_dirpath / "tracklet.yaml";
+  cv::FileStorage metafs(metadata_filepath.native(), cv::FileStorage::READ);
 
-  cv::FileStorage metafs(metadataFilename,cv::FileStorage::READ);
-
-  int trackletCount = (int)metafs["trackletCount"];
-
-  cv::FileNode tracklets = metafs["tracklets"];
-  cv::FileNodeIterator it2 = tracklets.begin(), it_end2 = tracklets.end();
+  const cv::FileNode& tracklets_meta = metafs["tracklets"];
   std::vector<int> frame_indices;
 
-  for(int i = 1;it2 != it_end2;++it2,i++){
+  tracklet_id_t i = 1;
+  boost::filesystem::path tracklet_img_filepath;
+  char tracklet_img_filename[256];
+  for (const auto& tracklet_meta : tracklets_meta) {
+    // Create a new face tracklet object.
+    FaceTracklet tracklet(i - 1);
 
-      this->tracklets_.push_back(ugproj::FaceTracklet(i-1));
+    // Prepare tracklet image filename.
+    std::sprintf(tracklet_img_filename, "tracklet_%u.png", i);
+    tracklet_img_filepath = output_dirpath / tracklet_img_filename;
 
-      std::string trackletFilename = cfg.input_dirpath.string();
-      trackletFilename += "tracklet_";
-      trackletFilename += std::to_string(i);
-      trackletFilename += ".png";
+    // Load tracklet image file.
+    cv::Mat tracklet_img = cv::imread(tracklet_img_filepath.native(),
+                                      CV_LOAD_IMAGE_COLOR);
+    if (!tracklet_img.data) {
+      std::fputs("Could not open or find the image\n", stderr);
+      return -1;
+    }
 
-      cv::Mat trackletMat = cv::imread(trackletFilename,CV_LOAD_IMAGE_COLOR);
+    tracklet_meta["frame_indices"] >> frame_indices;
 
-      if(!trackletMat.data){
-          std::printf("Could not open or find the image\n");
-        return -1;
-      }
+    static const int kSize = 64;
+    static const int kNCols = 16;
 
-      (*it2)["frame_indices"] >> frame_indices;
+    for (int j = 0; j < (int) frame_indices.size(); ++j) {
+      const auto frame_index = frame_indices[j];
+      const cv::Rect roi((j % kNCols) * kSize, (j / kNCols) * kSize,
+                         kSize, kSize);
+      cv::Mat cropped = tracklet_img(roi);
+      ugproj::Face f(frame_index, cropped, i);
+      tracklet.add_face(f);
+    }
 
-      static const int kSize = 64;
-      static const int kNCols = 16;
+    // Append the tracklet to the tracklet list.
+    this->tracklets_.push_back(tracklet);
 
-      for(int j=0;j<(int)frame_indices.size();j++){
-        const cv::Rect roi((j % kNCols) * kSize, (j / kNCols) * kSize,
-                          kSize, kSize);
-
-        cv::Mat cropped = trackletMat(roi);
-
-        ugproj::Face newFace(frame_indices[j],cropped,i);
-        this->tracklets_[i-1].add_face(newFace);
-      }
-
-      const auto iterators = this->tracklets_[i-1].face_iterators();
-      for(auto it = iterators.first; it != iterators.second; ++it){
-        const ugproj::Face& f = *it;
-      }
+    // Increment tracklet index.
+    ++i;
   }
 
+  // Now done with tracklet metadata file.
   metafs.release();
 
   return 0;

@@ -67,15 +67,11 @@ words, see issue #32.
 `clusterer` should be executed like this:
 
 ```shell
-./clusterer -c ../conf/apink.mrchu.720p.cfg -m output.apink.mrchu.720p.20150925/tracklet.yaml -p output.apink.mrchu.720p.20150925/mapping.yaml -i output.apink.mrchu.720p.20150925/ -o output.apink.mrchu.720p.20150925
+./clusterer -c ../conf/apink.mrchu.720p.cfg -v ../sample/apink.mrchu.720p.mp4 -o output.apink.mrchu.720p.20150925
 ```
 
-- `-c` or `--config-file` – Path to configuration file.
-- `-m` or `--metadata-file` – Path to metadata file for tracklets.
-- `-p` or `--mapping-file` – Path to global metadata file for face tracking.
-- `-i` or `--input-dir` – Path to directory which contains input files.
-- `-o` or `--output-dir` – Path to directory where output files will be
-created.
+Same as `tracker`. Value for `--output-dir` option is used as both input and
+output directory path.
 
 Once `clusterer` has been run and exited without any error, several files will
 be generated in the directory whose path is given as the value for
