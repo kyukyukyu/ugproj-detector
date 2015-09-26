@@ -6,7 +6,7 @@ namespace ugproj {
 
 cv::Mat Face::resized_image(int size) const {
   cv::Mat resized;
-  const cv::Size& orig_size = this->rect.size();
+  const cv::Size& orig_size = this->image.size();
   double f;
   if (orig_size.width >= orig_size.height) {
     f = (double) size / (double) orig_size.height;
@@ -25,6 +25,10 @@ cv::Mat Face::resized_image(int size) const {
     resized = cv::Mat(resized, roi);
   }
   return resized;
+}
+
+cv::Mat Face::get_image() const{
+  return this->image;
 }
 
 FaceTracklet::FaceTracklet(id_type id, const Face& f) : id(id) {
@@ -169,11 +173,19 @@ int Configuration::load(int argc, const char** argv) {
       ("clusterer.attempts",
        po::value<int>(&this->clustering.attempts)->default_value(8),
        "the number of attempts with different initial labellings.")
+
+      ("output.face_size",
+       po::value<unsigned int>(&this->output.face_size)->default_value(64),
+       "the size of (square) face expressed in tracklet images. The value of "
+       "this variable is the length of one side.")
+      ("output.n_cols_tracklet",
+       po::value<unsigned int>(&this->output.n_cols_tracklet)
+           ->default_value(16),
+       "the number of columns in tracklet images.")
     ;
 
     po::options_description visible_options("Allowed options");
     visible_options.add(generic_options);
-
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, visible_options), vm);
     if (vm.count("help")) {

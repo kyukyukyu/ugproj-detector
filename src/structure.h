@@ -111,6 +111,13 @@ struct Configuration {
     // The number of attempts with different initial labellings.
     int attempts;
   };
+  struct OutputSection {
+    // The size of (square) face expressed in tracklet images. The value of
+    // this variable is the length of one side. Defaults to 64.
+    unsigned int face_size;
+    // The number of columns in tracklet images. Defaults to 16.
+    unsigned int n_cols_tracklet;
+  };
   // Loads configuration from command line arguments and configuration file
   // whose path is provided as command line argument. Returns 0 on successful
   // loading, otherwise nonzero value.
@@ -124,6 +131,7 @@ struct Configuration {
   LucasKanadeSection lucas_kanade;
   AssociationSection association;
   ClusteringSection clustering;
+  OutputSection output;
 };
 
 class Face {
@@ -137,6 +145,9 @@ class Face {
     Face(const temp_idx_t frameIndex, const cv::Rect& rect,
                   const cv::Mat& image) :
         frameIndex(frameIndex), rect(rect), image(image), tracklet_id(0) {};
+    Face(const temp_idx_t frameIndex, const cv::Mat& image,
+                  const tracklet_id_t tracklet_id) :
+        frameIndex(frameIndex), image(image), tracklet_id(tracklet_id) {};
     Face(const Face& f) {
       this->frameIndex = f.frameIndex;
       this->rect = f.rect;
@@ -145,6 +156,7 @@ class Face {
       this->fitted = f.fitted;
     }
     cv::Mat resized_image(int size) const;
+    cv::Mat get_image() const;
 };
 
 class FaceTracklet {
