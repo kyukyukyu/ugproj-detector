@@ -111,6 +111,13 @@ struct Configuration {
     // The number of attempts with different initial labellings.
     int attempts;
   };
+  struct OutputSection {
+    // The size of (square) face expressed in tracklet images. The value of
+    // this variable is the length of one side. Defaults to 64.
+    unsigned int face_size;
+    // The number of columns in tracklet images. Defaults to 16.
+    unsigned int n_cols_tracklet;
+  };
   // Loads configuration from command line arguments and configuration file
   // whose path is provided as command line argument. Returns 0 on successful
   // loading, otherwise nonzero value.
@@ -124,6 +131,7 @@ struct Configuration {
   LucasKanadeSection lucas_kanade;
   AssociationSection association;
   ClusteringSection clustering;
+  OutputSection output;
 };
 
 class Face {

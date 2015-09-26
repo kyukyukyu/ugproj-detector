@@ -173,6 +173,15 @@ int Configuration::load(int argc, const char** argv) {
       ("clusterer.attempts",
        po::value<int>(&this->clustering.attempts)->default_value(8),
        "the number of attempts with different initial labellings.")
+
+      ("output.face_size",
+       po::value<unsigned int>(&this->output.face_size)->default_value(64),
+       "the size of (square) face expressed in tracklet images. The value of "
+       "this variable is the length of one side.")
+      ("output.n_cols_tracklet",
+       po::value<unsigned int>(&this->output.n_cols_tracklet)
+           ->default_value(16),
+       "the number of columns in tracklet images.")
     ;
 
     po::options_description visible_options("Allowed options");
