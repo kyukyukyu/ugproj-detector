@@ -51,50 +51,10 @@ int main(int argc, const char** argv) {
     // TODO: Run dimensionality reduction on faces in face tracklets using PCA.
     //
     // Assigned to: Naing0126
-
-    std::vector<cv::Mat> faceSet;
-
-    // Change to grey scale image
-    for(ugproj::FaceTracklet tracklet : tracklets){
-      const auto iterators = tracklet.face_iterators();
-      for(auto it = iterators.first; it != iterators.second; ++it){
-        const ugproj::Face& f = *it;
-        cv::Mat greyFace, colorFace;
-        colorFace = f.get_image();
-        cv::cvtColor(colorFace, greyFace, CV_BGR2GRAY);
-
-        faceSet.push_back(greyFace);
-      }
-    }
-
-    // Converts the images into a (n x d) matrix
-    int rtype = CV_32FC1;
-    double alpha = 1, beta = 0;
-    // Number of samples
-    size_t n = faceSet.size();
-    // dimensionality of (reshaped) samples
-    size_t d = faceSet[0].total();
-    // resulting data matrix
-    cv::Mat faces(n, d, rtype);
-    int i;
-    for(i = 0; i < n; i++){
-      if(faceSet[i].empty()){
-        std::string error_message = cv::format("Image number %d was empty",i);
-        CV_Error(CV_StsBadArg, error_message);
-      }
-      if(faceSet[i].total() != d){
-        std::string error_message = cv::format("Wrong number of elements in matrix #%d!",i);
-        CV_Error(CV_StsBadArg, error_message);
-      }
-      cv::Mat xi = faces.row(i);
-      if(faceSet[i].isContinuous()){
-        faceSet[i].reshape(1,1).convertTo(xi, rtype, alpha, beta);
-      }else{
-        faceSet[i].clone().reshape(1,1).convertTo(xi, rtype, alpha, beta);
-      }
-    }
-
-    std::cout << faces.size() << std::endl;
+    // Represent faces in vectors based on the results of flandmark and BRISK.
+    ugproj::FlmBriskVectorizer vectorizer;
+    // Matrix that contains vectorized faces. Each row corresponds to a face.
+    cv::Mat faces_vectorized = vectorizer.vectorize(tracklets);
 
     // Matrix that includes the result of PCA. Each row represents a face. The
     // order of faces should follow that of face tracklets and that of faces in
@@ -103,8 +63,8 @@ int main(int argc, const char** argv) {
     // faces_reduced should have dimensionality-reduced vector for face #1,
     // face #2, and face #3 in order, from the first row.
     cv::Mat faces_reduced;
-    cv::PCA pca(faces, cv::noArray(), CV_PCA_DATA_AS_ROW, 64);
-    faces_reduced = pca.project(faces);
+    cv::PCA pca(faces_vectorized, cv::noArray(), CV_PCA_DATA_AS_ROW, 64);
+    faces_reduced = pca.project(faces_vectorized);
 
     std::cout << faces_reduced.size() << std::endl;
 
