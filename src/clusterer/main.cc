@@ -100,8 +100,8 @@ int main(int argc, const char** argv) {
     // order of faces should follow that of face tracklets and that of faces in
     // a tracklet.
     // i.e. Given tracklet #1 {face #1, face #2}, tracklet #2 {face #3},
-    // repr_faces_reduced should have dimensionality-reduced vector for
-    // face #1, face #2, and face #3 in order, from the first row.
+    // faces_reduced should have dimensionality-reduced vector for face #1,
+    // face #2, and face #3 in order, from the first row.
     cv::Mat faces_reduced;
     cv::PCA pca(faces, cv::noArray(), CV_PCA_DATA_AS_ROW, 64);
     faces_reduced = pca.project(faces);
