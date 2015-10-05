@@ -167,10 +167,10 @@ int Configuration::load(int argc, const char** argv) {
       ("clustering.term_crit_n",
        po::value<int>(&this->clustering.term_crit.maxCount),
        "the maximum number of iterations in k-means.")
-      ("clusterer.term_crit_eps",
+      ("clustering.term_crit_eps",
        po::value<double>(&this->clustering.term_crit.epsilon),
        "the desired accuracy for k-means.")
-      ("clusterer.attempts",
+      ("clustering.attempts",
        po::value<int>(&this->clustering.attempts)->default_value(8),
        "the number of attempts with different initial labellings.")
 
