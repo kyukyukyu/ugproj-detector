@@ -173,6 +173,9 @@ int Configuration::load(int argc, const char** argv) {
       ("clustering.attempts",
        po::value<int>(&this->clustering.attempts)->default_value(8),
        "the number of attempts with different initial labellings.")
+      ("clustering.flm_model_filepath",
+       po::value<std::string>()->required(),
+       "path to Flandmark model data file.")
 
       ("output.face_size",
        po::value<unsigned int>(&this->output.face_size)->default_value(64),
@@ -210,10 +213,16 @@ int Configuration::load(int argc, const char** argv) {
     // Resolve path options from config file into path objects.
     boost::filesystem::path cascade_filepath =
         vm["detection.cascade_classifier_filepath"].as<std::string>();
+    boost::filesystem::path flm_model_filepath =
+        vm["clustering.flm_model_filepath"].as<std::string>();
     this->detection.cascade_filepath =
         cascade_filepath.is_absolute() ?
         cascade_filepath :
         config_dirpath / cascade_filepath;
+    this->clustering.flm_model_filepath =
+        flm_model_filepath.is_absolute() ?
+        flm_model_filepath :
+        config_dirpath / flm_model_filepath;
 
     ugproj::AssociationMethod& assoc_method = this->association.method;
     const auto& assoc_method_s = vm["association.method"].as<std::string>();
