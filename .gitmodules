@@ -1,3 +1,6 @@
 [submodule "tools/share/cmake/Modules/cmake-modules"]
 	path = tools/share/cmake/Modules/cmake-modules
 	url = https://github.com/hanjianwei/cmake-modules.git
+[submodule "thirdparty/flandmark"]
+	path = thirdparty/flandmark
+	url = https://github.com/uricamic/flandmark.git
