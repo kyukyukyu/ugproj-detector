@@ -22,6 +22,11 @@ cv::CascadeClassifier& TrackerFileInput::cascade() {
   return this->cascade_;
 }
 
+ClustererFileInput::~ClustererFileInput() {
+  // Free memory space for Flandmark model.
+  flandmark_free(this->flm_model_);
+}
+
 int ClustererFileInput::open(const Configuration& cfg) {
   const boost::filesystem::path& output_dirpath = cfg.output_dirpath;
   // Load mapping file and parse the data into the mapping between frame
@@ -93,6 +98,13 @@ int ClustererFileInput::open(const Configuration& cfg) {
   // Now done with tracklet metadata file.
   metafs.release();
 
+  // Load Flandmark model.
+  const char* flm_model_filepath =
+      cfg.clustering.flm_model_filepath.native().c_str();
+  // Memory space pointed by this will be freed on the destruction of FileInput
+  // object.
+  this->flm_model_ = flandmark_init(flm_model_filepath);
+
   return 0;
 }
 
@@ -102,6 +114,10 @@ const std::vector<unsigned long>& ClustererFileInput::tracked_positions() const{
 
 const std::vector<ugproj::FaceTracklet>& ClustererFileInput::tracklets() const{
   return this->tracklets_;
+}
+
+FLANDMARK_Model* ClustererFileInput::flm_model() {
+  return this->flm_model_;
 }
 
 int FileWriter::init(const Configuration& cfg) {
