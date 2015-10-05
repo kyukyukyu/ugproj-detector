@@ -1,5 +1,6 @@
 #include "../structure.h"
 #include "clusterer.h"
+#include "vectorizer.h"
 #include "visualizer.h"
 
 #include <opencv2/highgui/highgui.hpp>
@@ -51,8 +52,8 @@ int main(int argc, const char** argv) {
     // TODO: Run dimensionality reduction on faces in face tracklets using PCA.
     //
     // Assigned to: Naing0126
-    // Represent faces in vectors based on the results of flandmark and BRISK.
-    ugproj::FlmBriskVectorizer vectorizer;
+    // Represent faces in vectors based on the results of Flandmark.
+    ugproj::FlandmarkVectorizer vectorizer(cfg, input.flm_model());
     // Matrix that contains vectorized faces. Each row corresponds to a face.
     cv::Mat faces_vectorized = vectorizer.vectorize(tracklets);
 
@@ -65,8 +66,6 @@ int main(int argc, const char** argv) {
     cv::Mat faces_reduced;
     cv::PCA pca(faces_vectorized, cv::noArray(), CV_PCA_DATA_AS_ROW, 64);
     faces_reduced = pca.project(faces_vectorized);
-
-    std::cout << faces_reduced.size() << std::endl;
 
     // TODO: Make clusterer accept tracklet information and assign a cluster
     // label to each tracklet by voting.

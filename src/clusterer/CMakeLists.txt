@@ -1,5 +1,6 @@
 # Register source files
 list(APPEND clusterer_SRCS "clusterer.cc")
+list(APPEND clusterer_SRCS "vectorizer.cc")
 list(APPEND clusterer_SRCS "visualizer.cc")
 list(APPEND clusterer_SRCS "main.cc")
 
