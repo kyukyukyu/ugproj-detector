@@ -65,6 +65,25 @@ double* FlandmarkVectorizer::detect_landmarks(const Face& f) {
   face_iplimg_gray = face_img_gray;
   flandmark_detect(&face_iplimg_gray, this->bbox_, this->flm_model_,
                    landmarks);
+  // Face image whose landmarks are marked.
+  cv::Mat face_marked;
+  f.image.copyTo(face_marked);
+  // Landmark points.
+  std::vector<cv::Point2d> landmark_points;
+  landmark_points.reserve(8);
+  for (int i = 0; i < 16; i += 2) {
+    landmark_points.push_back(cv::Point2d(landmarks[i], landmarks[i + 1]));
+  }
+  // Draw center point.
+  cv::circle(face_marked, landmark_points[0], 3, CV_RGB(0, 0, 255), CV_FILLED);
+  // Draw other points.
+  for (int i = 1; i < 8; ++i) {
+    cv::circle(face_marked, landmark_points[i], 3, CV_RGB(255, 0, 0),
+               CV_FILLED);
+  }
+#ifdef UGPROJ_CLUSTERER_VERBOSE
+  cv::imshow("Landmark Detection", face_marked);
+#endif
   return landmarks;
 }
 
@@ -100,6 +119,13 @@ cv::Mat FlandmarkVectorizer::compute_desc(const double* landmarks,
   right_eye = cv::Mat(face_img, roi_right_eye);
   nose = cv::Mat(face_img, roi_nose);
   mouth = cv::Mat(face_img, roi_mouth);
+#ifdef UGPROJ_CLUSTERER_VERBOSE
+  cv::imshow("Left Eye", left_eye);
+  cv::imshow("Right Eye", right_eye);
+  cv::imshow("Nose", nose);
+  cv::imshow("Mouth", mouth);
+  cv::waitKey(0);
+#endif
 
   this->compute_lbp_hist(left_eye, desc_left_eye);
   this->compute_lbp_hist(right_eye, desc_right_eye);
