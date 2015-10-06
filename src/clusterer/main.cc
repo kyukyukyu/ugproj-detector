@@ -3,6 +3,8 @@
 #include "visualizer.h"
 
 #include <opencv2/highgui/highgui.hpp>
+#include <math.h>
+#include <complex>
 
 cv::Mat norm_0_255(const cv::Mat& src){
     cv::Mat dst;
@@ -53,8 +55,10 @@ int main(int argc, const char** argv) {
     // Assigned to: Naing0126
 
     std::vector<cv::Mat> faceSet;
+    std::vector<int> labelSet;
 
     // Change to grey scale image
+    int faceCnt = 0;
     for(ugproj::FaceTracklet tracklet : tracklets){
       const auto iterators = tracklet.face_iterators();
       for(auto it = iterators.first; it != iterators.second; ++it){
@@ -64,11 +68,51 @@ int main(int argc, const char** argv) {
         cv::cvtColor(colorFace, greyFace, CV_BGR2GRAY);
 
         faceSet.push_back(greyFace);
+        labelSet.push_back(faceCnt++);
       }
     }
 
+    int height = faceSet[0].rows;
+    cv::Mat testSample = faceSet[faceSet.size()-1];
+    int testLabel = labelSet[faceSet.size()-1];
+
+    // Find EigenFace
+    cv::Ptr<cv::FaceRecognizer> model = cv::createEigenFaceRecognizer();
+    model->train(faceSet, labelSet);
+
+    cv::Mat eigenvalues = model->getMat("eigenvalues");
+    cv::Mat W = model->getMat("eigenvectors");
+    cv::Mat mean = model->getMat("mean");
+
+    std::cout << "eigenvalues " << eigenvalues.size() << " eigenvectors " << W.size() << W.type() << std::endl;
+
+    std::cout << "eigenvector cols " << W.cols << std::endl;
+    // Display Eigenfaces
+    for(int i=0;i<std::min(10,W.cols);i++){
+      cv::Mat ev = W.col(i).clone();
+
+      cv::Mat grayscale = norm_0_255(ev.reshape(1,height));
+      cv::Mat cgrayscale;
+      applyColorMap(grayscale, cgrayscale, cv::COLORMAP_JET);
+      char filename[1024];
+      std::sprintf(filename,"eigenface_%d.png",i);
+      writer.write_image(cgrayscale,filename);
+    }
+
+    // Display the image reconstruction
+    for(int num_components = std::min(W.cols, 10); num_components < std::min(W.cols, 300); num_components += 15){
+      cv::Mat evs = cv::Mat(W, cv::Range::all(), cv::Range(0,num_components));
+      cv::Mat projection = subspaceProject(evs, mean, faceSet[0].reshape(1,1));
+      cv::Mat reconstruction = subspaceReconstruct(evs, mean, projection);
+
+      reconstruction = norm_0_255(reconstruction.reshape(1, height));
+      char filename[1024];
+      std::sprintf(filename,"eigenface_reconstruction_%d.png",num_components);
+      writer.write_image(reconstruction,filename);
+    }
+
     // Converts the images into a (n x d) matrix
-    int rtype = CV_32FC1;
+    int rtype = CV_64FC1;
     double alpha = 1, beta = 0;
     // Number of samples
     size_t n = faceSet.size();
@@ -94,8 +138,63 @@ int main(int argc, const char** argv) {
       }
     }
 
-    std::cout << faces.size() << std::endl;
+    std::cout << "faces " << faces.size() << faces.type() << std::endl;
 
+    // Implement weight
+    cv::Mat weights = faces * W;
+    std::cout << "weights " << weights.size() << " cols " << weights.cols << std::endl;
+  
+    // Calculate Affinity Matrix
+    cv::Mat affinity(weights.rows,weights.rows,CV_32FC1);
+
+    for(int i=0;i<weights.rows;i++){
+      for(int j=0;j<weights.rows;j++){
+          cv::Mat temp = weights.row(i) - weights.row(j);
+          
+          std::vector<double> distance;
+          temp.copyTo(distance);
+          double sum = 0;
+          for(int k=0;k<distance.size();k++){
+            sum += distance[k]*distance[k];
+          }
+          affinity.at<double>(i,j) = std::sqrt(sum);
+          std::cout << i <<"," << j  <<" - " << affinity.at<double>(i,j) << std::endl;
+      }
+    }
+
+    for(int i=0;i<weights.rows;i++){
+      for(int j=0;j<weights.rows;j++){
+          std::cout << i <<"," << j  <<" - " << affinity.at<double>(i,j) << std::endl;
+      }
+    }
+    //completeSymm(affinity);
+    std::cout << "affinity " << affinity.size() << std::endl;
+
+    cv::Mat degree(1, affinity.cols, CV_32FC1);
+        std::cout << "degree " << degree.size() << std::endl;
+
+    for(int col = 0;col < 100 ; col++){
+       // std::cout << col << " " << affinity.col(col).size() << " " << affinity.at<double>(col,0) << std::endl;
+        //std::cout << "degree " << degree.at<double>(0,col) << std::endl;
+        
+        for(int row = 0;row < affinity.rows; row++){
+          degree.at<float>(0,col) += affinity.at<double>(col,row);
+      //    std::cout << col << ", " << row << ",sum " << affinity.at<double>(99,411) << std::endl;
+        }
+        //std::cout << "complete " << degree.at<float>(0,col) << std::endl;
+    }
+    //for(int col = 0; col < 100; col++)
+        //std::cout << degree.at<float>(0,col) <<",";
+    /*
+    // Calculate Laplacian matrix
+    cv::Mat L = cv::Mat::diag(degree) - affinity;
+    cv::Mat degree_05;
+    pow( degree, -0.5, degree_05 );
+    degree_05 = cv::Mat::diag( degree_05 );
+    L = (degree_05 * L) * degree_05;
+    std::cout << "Laplacian " << L.size() << std::endl;
+    */
+    /*
     // Matrix that includes the result of PCA. Each row represents a face. The
     // order of faces should follow that of face tracklets and that of faces in
     // a tracklet.
@@ -107,6 +206,7 @@ int main(int argc, const char** argv) {
     faces_reduced = pca.project(faces);
 
     std::cout << faces_reduced.size() << std::endl;
+
 
     // TODO: Make clusterer accept tracklet information and assign a cluster
     // label to each tracklet by voting.
@@ -123,6 +223,7 @@ int main(int argc, const char** argv) {
     ugproj::FaceClustersVisualizer visualizer(cfg, &writer);
     visualizer.visualize(tracked_positions, tracklets,
                          cfg.clustering.k, cluster_ids);
+    */
   } catch (std::exception*) {
     return 1;
   }
