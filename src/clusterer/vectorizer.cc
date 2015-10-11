@@ -85,16 +85,16 @@ cv::Mat FlandmarkVectorizer::compute_desc(const double* landmarks,
 
   cv::Rect roi_left_eye =
       this->get_roi_horiz(landmarks[10], landmarks[11],
-                          landmarks[2], landmarks[3]);
+                          landmarks[2], landmarks[3], 2.0/3.0);
   cv::Rect roi_right_eye =
       this->get_roi_horiz(landmarks[4], landmarks[5],
-                          landmarks[12], landmarks[13]);
+                          landmarks[12], landmarks[13], 2.0/3.0);
   cv::Rect roi_nose =
       this->get_roi_nose(landmarks[2], landmarks[3],
                          landmarks[4], landmarks[5], landmarks[15]);
   cv::Rect roi_mouth =
       this->get_roi_horiz(landmarks[6], landmarks[7],
-                          landmarks[8], landmarks[9], 2.0/5.0);
+                          landmarks[8], landmarks[9], 2.0/3.0);
 
   left_eye = cv::Mat(face_img, roi_left_eye);
   right_eye = cv::Mat(face_img, roi_right_eye);
