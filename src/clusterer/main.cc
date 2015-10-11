@@ -145,7 +145,9 @@ int main(int argc, const char** argv) {
     std::cout << "weights " << weights.size() << " cols " << weights.cols << std::endl;
   
     // Calculate Affinity Matrix
-    cv::Mat affinity(weights.rows,weights.rows,CV_32FC1);
+    cv::Mat affinity;
+    affinity.create(weights.rows,weights.rows,CV_64FC1);
+    
 
     for(int i=0;i<weights.rows;i++){
       for(int j=0;j<weights.rows;j++){
@@ -158,34 +160,28 @@ int main(int argc, const char** argv) {
             sum += distance[k]*distance[k];
           }
           affinity.at<double>(i,j) = std::sqrt(sum);
-          std::cout << i <<"," << j  <<" - " << affinity.at<double>(i,j) << std::endl;
       }
     }
 
-    for(int i=0;i<weights.rows;i++){
-      for(int j=0;j<weights.rows;j++){
-          std::cout << i <<"," << j  <<" - " << affinity.at<double>(i,j) << std::endl;
-      }
-    }
     //completeSymm(affinity);
     std::cout << "affinity " << affinity.size() << std::endl;
 
-    cv::Mat degree(1, affinity.cols, CV_32FC1);
+    cv::Mat degree(1, affinity.cols, CV_64FC1);
         std::cout << "degree " << degree.size() << std::endl;
 
-    for(int col = 0;col < 100 ; col++){
-       // std::cout << col << " " << affinity.col(col).size() << " " << affinity.at<double>(col,0) << std::endl;
+    for(int col = 0;col < affinity.cols ; col++){
+        //std::cout << col << " " << affinity.col(col).size() << " " << affinity.at<double>(col,0) << std::endl;
         //std::cout << "degree " << degree.at<double>(0,col) << std::endl;
-        
+        degree.at<double>(0,col) = 0;
         for(int row = 0;row < affinity.rows; row++){
-          degree.at<float>(0,col) += affinity.at<double>(col,row);
+          degree.at<double>(0,col) += affinity.at<double>(col,row);
       //    std::cout << col << ", " << row << ",sum " << affinity.at<double>(99,411) << std::endl;
         }
         //std::cout << "complete " << degree.at<float>(0,col) << std::endl;
     }
     //for(int col = 0; col < 100; col++)
         //std::cout << degree.at<float>(0,col) <<",";
-    /*
+    
     // Calculate Laplacian matrix
     cv::Mat L = cv::Mat::diag(degree) - affinity;
     cv::Mat degree_05;
@@ -193,8 +189,14 @@ int main(int argc, const char** argv) {
     degree_05 = cv::Mat::diag( degree_05 );
     L = (degree_05 * L) * degree_05;
     std::cout << "Laplacian " << L.size() << std::endl;
-    */
-    /*
+   
+    cv::Mat Leigenvectors,Leigenvalues;
+    eigen( L, Leigenvalues, Leigenvectors);
+
+    Leigenvectors = Leigenvectors.rowRange(Leigenvectors.rows - 64, Leigenvectors.rows).t();
+
+    std::cout << "Laplacian eigenvectors " << Leigenvectors.size() << std::endl;
+
     // Matrix that includes the result of PCA. Each row represents a face. The
     // order of faces should follow that of face tracklets and that of faces in
     // a tracklet.
@@ -205,7 +207,7 @@ int main(int argc, const char** argv) {
     cv::PCA pca(faces, cv::noArray(), CV_PCA_DATA_AS_ROW, 64);
     faces_reduced = pca.project(faces);
 
-    std::cout << faces_reduced.size() << std::endl;
+    std::cout << "faces_reduced "<< faces_reduced.size() << std::endl;
 
 
     // TODO: Make clusterer accept tracklet information and assign a cluster
@@ -223,7 +225,6 @@ int main(int argc, const char** argv) {
     ugproj::FaceClustersVisualizer visualizer(cfg, &writer);
     visualizer.visualize(tracked_positions, tracklets,
                          cfg.clustering.k, cluster_ids);
-    */
   } catch (std::exception*) {
     return 1;
   }
