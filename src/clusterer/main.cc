@@ -93,7 +93,7 @@ int main(int argc, const char** argv) {
 
       cv::Mat grayscale = norm_0_255(ev.reshape(1,height));
       cv::Mat cgrayscale;
-      applyColorMap(grayscale, cgrayscale, cv::COLORMAP_JET);
+      cv::applyColorMap(grayscale, cgrayscale, cv::COLORMAP_JET);
       char filename[1024];
       std::sprintf(filename,"eigenface_%d.png",i);
       writer.write_image(cgrayscale,filename);
@@ -143,16 +143,16 @@ int main(int argc, const char** argv) {
     // Implement weight
     cv::Mat weights = faces * W;
     std::cout << "weights " << weights.size() << " cols " << weights.cols << std::endl;
-  
+
     // Calculate Affinity Matrix
     cv::Mat affinity;
     affinity.create(weights.rows,weights.rows,CV_64FC1);
-    
+
 
     for(int i=0;i<weights.rows;i++){
       for(int j=0;j<weights.rows;j++){
           cv::Mat temp = weights.row(i) - weights.row(j);
-          
+
           std::vector<double> distance;
           temp.copyTo(distance);
           double sum = 0;
@@ -181,17 +181,17 @@ int main(int argc, const char** argv) {
     }
     //for(int col = 0; col < 100; col++)
         //std::cout << degree.at<float>(0,col) <<",";
-    
+
     // Calculate Laplacian matrix
     cv::Mat L = cv::Mat::diag(degree) - affinity;
     cv::Mat degree_05;
-    pow( degree, -0.5, degree_05 );
+    cv::pow( degree, -0.5, degree_05 );
     degree_05 = cv::Mat::diag( degree_05 );
     L = (degree_05 * L) * degree_05;
     std::cout << "Laplacian " << L.size() << std::endl;
-   
+
     cv::Mat Leigenvectors,Leigenvalues;
-    eigen( L, Leigenvalues, Leigenvectors);
+    cv::eigen( L, Leigenvalues, Leigenvectors);
 
     Leigenvectors = Leigenvectors.rowRange(Leigenvectors.rows - 64, Leigenvectors.rows).t();
 
