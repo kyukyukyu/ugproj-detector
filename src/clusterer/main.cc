@@ -209,11 +209,17 @@ int main(int argc, const char** argv) {
     // Make clusterer accept tracklet information and assign a cluster
     // label to each tracklet by voting.
 
+    // Matrix T in float-typed real numbers.
+    cv::Mat T_float;
     // List of cluster IDs for face tracklets.
     std::vector<int> cluster_ids;
     // Clusterer object for faces.
     ugproj::FaceClusterer clusterer(cfg);
-    clusterer.do_clustering(T, tracklets, &cluster_ids);
+
+    // Since cv::kmeans() only accepts matrix in CV_32F, T should be converted.
+    T_float.create(T.size(), CV_32FC1);
+    T.convertTo(T_float, CV_32FC1);
+    clusterer.do_clustering(T_float, tracklets, &cluster_ids);
 
     // == End of normalized spectral clustering. ==============================
 
