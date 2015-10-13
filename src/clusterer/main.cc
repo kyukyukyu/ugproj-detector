@@ -178,7 +178,7 @@ int main(int argc, const char** argv) {
 
     // Laplacian matrix L.
     cv::Mat L = D - affinity;
-    // D^(-1/2). m stands for 'minus', and o stands for point. (.)
+    // D^-(1/2). m stands for 'minus', and o stands for point. (.)
     cv::Mat D_mo5;
     // Normalized Laplacian matrix L_sym.
     cv::Mat L_sym;
@@ -186,8 +186,9 @@ int main(int argc, const char** argv) {
     // stored in the descending order, and eigenvectors are stored in the same
     // order.
     cv::Mat eval_L_sym, evec_L_sym;
-    // Compute D^(-1/2).
-    cv::pow(D, -0.5, D_mo5);
+    // Compute D^-(1/2).
+    cv::pow(D, 0.5, D_mo5);
+    D_mo5 = D_mo5.inv();
     // Normalize L.
     L_sym = (D_mo5 * L) * D_mo5;
     // Compute eigenvalues and eigenvectors of L_sym.
