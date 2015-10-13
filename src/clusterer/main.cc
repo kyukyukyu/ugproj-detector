@@ -144,82 +144,78 @@ int main(int argc, const char** argv) {
     cv::Mat weights = faces * W;
     std::cout << "weights " << weights.size() << " cols " << weights.cols << std::endl;
 
-    // Calculate Affinity Matrix
+    // Compute affinity matrix.
     cv::Mat affinity;
-    affinity.create(weights.rows,weights.rows,CV_64FC1);
-
-
-    for(int i=0;i<weights.rows;i++){
-      for(int j=0;j<weights.rows;j++){
-          cv::Mat temp = weights.row(i) - weights.row(j);
-
-          std::vector<double> distance;
-          temp.copyTo(distance);
-          double sum = 0;
-          for(int k=0;k<distance.size();k++){
-            sum += distance[k]*distance[k];
-          }
-          affinity.at<double>(i,j) = std::sqrt(sum);
+    affinity.create(weights.rows, weights.rows, CV_64FC1);
+    for (int i = 0; i < weights.rows; ++i) {
+      for (int j = 0; j < weights.rows; ++j) {
+        cv::Mat diff = weights.row(i) - weights.row(j);
+        affinity.at<double>(i, j) = cv::norm(diff);
       }
     }
 
-    //completeSymm(affinity);
-    std::cout << "affinity " << affinity.size() << std::endl;
+    // Run normalized spectral clustering according to Ng, Jordan, and Weiss
+    // (2002).
+    // == Start of normalized spectral clustering. ============================
 
-    cv::Mat degree(1, affinity.cols, CV_64FC1);
-        std::cout << "degree " << degree.size() << std::endl;
+    // Compute degree matrix D.
 
-    for(int col = 0;col < affinity.cols ; col++){
-        //std::cout << col << " " << affinity.col(col).size() << " " << affinity.at<double>(col,0) << std::endl;
-        //std::cout << "degree " << degree.at<double>(0,col) << std::endl;
-        degree.at<double>(0,col) = 0;
-        for(int row = 0;row < affinity.rows; row++){
-          degree.at<double>(0,col) += affinity.at<double>(col,row);
-      //    std::cout << col << ", " << row << ",sum " << affinity.at<double>(99,411) << std::endl;
-        }
-        //std::cout << "complete " << degree.at<float>(0,col) << std::endl;
+    // Degree vector deg.
+    cv::Mat deg(1, affinity.cols, CV_64FC1);
+    // Degree matrix D, which is diagonalized version of deg.
+    cv::Mat D;
+    for (int i = 0; i < affinity.cols; ++i) {
+      // Degree for node i.
+      double deg_i = 0.0;
+      for (int j = 0; j < affinity.rows; ++j) {
+        deg_i += affinity.at<double>(i, j);
+      }
+      deg.at<double>(0, i) = deg_i;
     }
-    //for(int col = 0; col < 100; col++)
-        //std::cout << degree.at<float>(0,col) <<",";
+    D = cv::Mat::diag(deg);
 
-    // Calculate Laplacian matrix
-    cv::Mat L = cv::Mat::diag(degree) - affinity;
-    cv::Mat degree_05;
-    cv::pow( degree, -0.5, degree_05 );
-    degree_05 = cv::Mat::diag( degree_05 );
-    L = (degree_05 * L) * degree_05;
-    std::cout << "Laplacian " << L.size() << std::endl;
+    // Calculate normalized Laplacian matrix.
 
-    cv::Mat Leigenvectors,Leigenvalues;
-    cv::eigen( L, Leigenvalues, Leigenvectors);
+    // Laplacian matrix L.
+    cv::Mat L = D - affinity;
+    // D^(-1/2). m stands for 'minus', and o stands for point. (.)
+    cv::Mat D_mo5;
+    // Normalized Laplacian matrix L_sym.
+    cv::Mat L_sym;
+    // Eigenvalues and corresponding eigenvectors of L_sym. Eigenvalues are
+    // stored in the descending order, and eigenvectors are stored in the same
+    // order.
+    cv::Mat eval_L_sym, evec_L_sym;
+    // Compute D^(-1/2).
+    cv::pow(D, -0.5, D_mo5);
+    // Normalize L.
+    L_sym = (D_mo5 * L) * D_mo5;
+    // Compute eigenvalues and eigenvectors of L_sym.
+    cv::eigen(L_sym, eval_L_sym, evec_L_sym);
 
-    Leigenvectors = Leigenvectors.rowRange(Leigenvectors.rows - 64, Leigenvectors.rows).t();
+    // Compute matrix U whose columns are top k eigenvectors of L_sym, then
+    // form a matrix T from U by normalizing the rows to norm 1.
 
-    std::cout << "Laplacian eigenvectors " << Leigenvectors.size() << std::endl;
+    // Matrix U.
+    cv::Mat U = evec_L_sym.rowRange(0, 64).t();
+    // Matrix T.
+    cv::Mat T;
+    T.create(U.size(), U.type());
+    // L2-normalize each row of U and stores them into T.
+    for (i = U.rows - 1; i >= 0; --i) {
+      cv::normalize(T.row(i), U.row(i));
+    }
 
-    // Matrix that includes the result of PCA. Each row represents a face. The
-    // order of faces should follow that of face tracklets and that of faces in
-    // a tracklet.
-    // i.e. Given tracklet #1 {face #1, face #2}, tracklet #2 {face #3},
-    // repr_faces_reduced should have dimensionality-reduced vector for
-    // face #1, face #2, and face #3 in order, from the first row.
-    cv::Mat faces_reduced;
-    cv::PCA pca(faces, cv::noArray(), CV_PCA_DATA_AS_ROW, 64);
-    faces_reduced = pca.project(faces);
-
-    std::cout << "faces_reduced "<< faces_reduced.size() << std::endl;
-
-
-    // TODO: Make clusterer accept tracklet information and assign a cluster
+    // Make clusterer accept tracklet information and assign a cluster
     // label to each tracklet by voting.
-    //
-    // Assigned to: kyukyukyu
 
     // List of cluster IDs for face tracklets.
     std::vector<int> cluster_ids;
     // Clusterer object for faces.
     ugproj::FaceClusterer clusterer(cfg);
-    clusterer.do_clustering(faces_reduced, tracklets, &cluster_ids);
+    clusterer.do_clustering(T, tracklets, &cluster_ids);
+
+    // == End of normalized spectral clustering. ==============================
 
     // Writes the visualization of result of clustering to multiple files.
     ugproj::FaceClustersVisualizer visualizer(cfg, &writer);
