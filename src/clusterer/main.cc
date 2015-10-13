@@ -149,8 +149,10 @@ int main(int argc, const char** argv) {
     affinity.create(weights.rows, weights.rows, CV_64FC1);
     for (int i = 0; i < weights.rows; ++i) {
       for (int j = 0; j < weights.rows; ++j) {
+        double norm;
         cv::Mat diff = weights.row(i) - weights.row(j);
-        affinity.at<double>(i, j) = cv::norm(diff);
+        norm = cv::norm(diff);
+        affinity.at<double>(i, j) = norm;
       }
     }
 
@@ -173,11 +175,13 @@ int main(int argc, const char** argv) {
       deg.at<double>(0, i) = deg_i;
     }
     D = cv::Mat::diag(deg);
+    deg.release();
 
     // Calculate normalized Laplacian matrix.
 
     // Laplacian matrix L.
     cv::Mat L = D - affinity;
+    affinity.release();
     // D^-(1/2). m stands for 'minus', and o stands for point. (.)
     cv::Mat D_mo5;
     // Normalized Laplacian matrix L_sym.
@@ -189,8 +193,10 @@ int main(int argc, const char** argv) {
     // Compute D^-(1/2).
     cv::pow(D, 0.5, D_mo5);
     D_mo5 = D_mo5.inv();
+    D.release();
     // Normalize L.
     L_sym = (D_mo5 * L) * D_mo5;
+    L.release();
     // Compute eigenvalues and eigenvectors of L_sym.
     cv::eigen(L_sym, eval_L_sym, evec_L_sym);
 
@@ -201,11 +207,17 @@ int main(int argc, const char** argv) {
     cv::Mat U = evec_L_sym.rowRange(0, 64).t();
     // Matrix T.
     cv::Mat T;
-    T.create(U.size(), U.type());
+    // Temporary matrix for each row of T.
+    cv::Mat T_row;
+    T.create(U.size(), CV_64FC1);
+    T_row.create(1, U.cols, CV_64FC1);
     // L2-normalize each row of U and stores them into T.
     for (i = U.rows - 1; i >= 0; --i) {
-      cv::normalize(T.row(i), U.row(i));
+      cv::normalize(U.row(i), T_row);
+      T_row.copyTo(T.row(i));
     }
+    U.release();
+    T_row.release();
 
     // Make clusterer accept tracklet information and assign a cluster
     // label to each tracklet by voting.
