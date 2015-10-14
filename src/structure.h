@@ -110,6 +110,8 @@ struct Configuration {
     cv::TermCriteria term_crit;
     // The number of attempts with different initial labellings.
     int attempts;
+    // Path to Flandmark model data file.
+    boost::filesystem::path flm_model_filepath;
   };
   struct OutputSection {
     // The size of (square) face expressed in tracklet images. The value of

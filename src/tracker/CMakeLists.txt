@@ -4,7 +4,7 @@ list(APPEND tracker_SRCS "associator.cc")
 list(APPEND tracker_SRCS "face_tracker.cc")
 list(APPEND tracker_SRCS "main.cc")
 
-set(tracker_LIBS ${Boost_LIBRARIES} ${OpenCV_LIBS})
+set(tracker_LIBS ${Boost_LIBRARIES} ${OpenCV_LIBS} ${FLANDMARK_LIBRARIES})
 set(tracker_BIN tracker)
 
 add_executable(${tracker_BIN} ${common_SRCS} ${tracker_SRCS})
