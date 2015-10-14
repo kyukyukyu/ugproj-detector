@@ -109,7 +109,8 @@ int main(int argc, const char** argv) {
     }
 
     // Compute weights for eigenvectors of faces.
-    cv::Mat weights = faces * W;
+    cv::Mat evs = cv::Mat(W, cv::Range::all(), cv::Range(0, std::min(W.cols, 32)));
+    cv::Mat weights = faces * evs;
 
     // Compute affinity matrix.
 
