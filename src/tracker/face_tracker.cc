@@ -199,6 +199,17 @@ int FaceTracker::track_frame(
   std::printf("done. Found %lu faces.\n", curr_faces->size());
 
   if (prev_faces == NULL) {
+    // This frame is the first scanned one. For each of faces detected in this
+    // frame, face tracklet should be created and added to the list of
+    // tracklets.
+    std::vector<FaceTracklet>::size_type tracklet_id = 1;
+    for (auto& face : *curr_faces) {
+      FaceTracklet tracklet(tracklet_id);
+      face.tracklet_id = tracklet_id;
+      tracklet.add_face(face);
+      tracklets->push_back(tracklet);
+      ++tracklet_id;
+    }
     std::printf("no prev faces");
     return 0;
   }
