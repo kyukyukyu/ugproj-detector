@@ -148,11 +148,12 @@ int main(int argc, const char** argv) {
     cv::Mat affinity;
     affinity.create(weights.rows, weights.rows, CV_64FC1);
     for (int i = 0; i < weights.rows; ++i) {
-      for (int j = 0; j < weights.rows; ++j) {
+      affinity.at<double>(i, i) = 0.0;
+      for (int j = i + 1; j < weights.rows; ++j) {
         double norm;
         cv::Mat diff = weights.row(i) - weights.row(j);
         norm = cv::norm(diff);
-        affinity.at<double>(i, j) = norm;
+        affinity.at<double>(i, j) = affinity.at<double>(j, i) = norm;
       }
     }
 
