@@ -24,6 +24,9 @@ int FaceClustersVisualizer::visualize(
     cluster.push_back(tracklet);
   }
   for (int i = 0; i < n_clusters; ++i) {
+    if (clusters[i].empty()) {
+      continue;
+    }
     ret |= this->visualize_single(tracked_positions, clusters[i], i);
     if (ret) {
       break;
