@@ -60,12 +60,12 @@ void FaceClusterer::vote_for_labels(const std::vector<int>& labels_face,
     // Counters for cluster labels.
     std::vector<int> counters(n_clusters, 0);
 
-  std::printf("before vote\n");
+//  std::printf("before vote\n");
     // Vote for cluster label of the tracklet.
     for (int i = 0; i < n_faces; ++i) {
-  std::printf("before label\n");
+//  std::printf("before label\n");
       const auto label = *it_label_face;
-  std::printf("after label\n");
+//  std::printf("after label\n");
 
       ++counters[label];
       ++it_label_face;

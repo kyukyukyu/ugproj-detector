@@ -4,6 +4,8 @@
 #include "visualizer.h"
 
 #include <opencv2/highgui/highgui.hpp>
+#include <math.h>
+#include <complex>
 
 cv::Mat norm_0_255(const cv::Mat& src){
     cv::Mat dst;
@@ -49,34 +51,110 @@ int main(int argc, const char** argv) {
     const std::vector<ugproj::FaceTracklet>& tracklets =
         input.tracklets();
 
-    // TODO: Run dimensionality reduction on faces in face tracklets using PCA.
-    //
-    // Assigned to: Naing0126
     // Represent faces in vectors based on the results of Flandmark.
     ugproj::FlandmarkVectorizer vectorizer(cfg, input.flm_model());
     // Matrix that contains vectorized faces. Each row corresponds to a face.
     cv::Mat faces_vectorized = vectorizer.vectorize(tracklets);
 
-    // Matrix that includes the result of PCA. Each row represents a face. The
-    // order of faces should follow that of face tracklets and that of faces in
-    // a tracklet.
-    // i.e. Given tracklet #1 {face #1, face #2}, tracklet #2 {face #3},
-    // faces_reduced should have dimensionality-reduced vector for face #1,
-    // face #2, and face #3 in order, from the first row.
-    cv::Mat faces_reduced;
-    cv::PCA pca(faces_vectorized, cv::noArray(), CV_PCA_DATA_AS_ROW, 64);
-    faces_reduced = pca.project(faces_vectorized);
+    // Compute affinity matrix.
 
-    // TODO: Make clusterer accept tracklet information and assign a cluster
+    // Affinity matrix.
+    cv::Mat affinity;
+    // The number of faces.
+    const auto n_faces = faces_vectorized.rows;
+    // Parameter that controls the width of neighborhoods.
+    const double sigma = 0.2;
+    affinity.create(n_faces, n_faces, CV_64FC1);
+    for (int i = 0; i < n_faces; ++i) {
+      affinity.at<double>(i, i) = std::exp(0.0);
+      for (int j = i + 1; j < n_faces; ++j) {
+        double norm;
+        cv::Mat diff = faces_vectorized.row(i) - faces_vectorized.row(j);
+        norm = cv::norm(diff);
+        affinity.at<double>(i, j) = affinity.at<double>(j, i) =
+            std::exp(-(norm * norm) / (2 * sigma * sigma));
+      }
+    }
+
+    // Run normalized spectral clustering according to Ng, Jordan, and Weiss
+    // (2002).
+    // == Start of normalized spectral clustering. ============================
+
+    // Compute degree matrix D.
+
+    // Degree vector deg.
+    cv::Mat deg(1, affinity.cols, CV_64FC1);
+    // Degree matrix D, which is diagonalized version of deg.
+    cv::Mat D;
+    for (int i = 0; i < affinity.cols; ++i) {
+      // Degree for node i.
+      double deg_i = 0.0;
+      for (int j = 0; j < affinity.rows; ++j) {
+        deg_i += affinity.at<double>(i, j);
+      }
+      deg.at<double>(0, i) = deg_i;
+    }
+    D = cv::Mat::diag(deg);
+    deg.release();
+
+    // Calculate normalized Laplacian matrix.
+
+    // Laplacian matrix L.
+    cv::Mat L = D - affinity;
+    affinity.release();
+    // D^-(1/2). m stands for 'minus', and o stands for point. (.)
+    cv::Mat D_mo5;
+    // Normalized Laplacian matrix L_sym.
+    cv::Mat L_sym;
+    // Eigenvalues and corresponding eigenvectors of L_sym. Eigenvalues are
+    // stored in the descending order, and eigenvectors are stored in the same
+    // order.
+    cv::Mat eval_L_sym, evec_L_sym;
+    // Compute D^-(1/2).
+    cv::pow(D, 0.5, D_mo5);
+    D_mo5 = D_mo5.inv();
+    D.release();
+    // Normalize L.
+    L_sym = (D_mo5 * L) * D_mo5;
+    L.release();
+    // Compute eigenvalues and eigenvectors of L_sym.
+    cv::eigen(L_sym, eval_L_sym, evec_L_sym);
+
+    // Compute matrix U whose columns are top k eigenvectors of L_sym, then
+    // form a matrix T from U by normalizing the rows to norm 1.
+
+    // Matrix U.
+    cv::Mat U = evec_L_sym.rowRange(0, 64).t();
+    // Matrix T.
+    cv::Mat T;
+    // Temporary matrix for each row of T.
+    cv::Mat T_row;
+    T.create(U.size(), CV_64FC1);
+    T_row.create(1, U.cols, CV_64FC1);
+    // L2-normalize each row of U and stores them into T.
+    for (int i = U.rows - 1; i >= 0; --i) {
+      cv::normalize(U.row(i), T_row);
+      T_row.copyTo(T.row(i));
+    }
+    U.release();
+    T_row.release();
+
+    // Make clusterer accept tracklet information and assign a cluster
     // label to each tracklet by voting.
-    //
-    // Assigned to: kyukyukyu
 
+    // Matrix T in float-typed real numbers.
+    cv::Mat T_float;
     // List of cluster IDs for face tracklets.
     std::vector<int> cluster_ids;
     // Clusterer object for faces.
     ugproj::FaceClusterer clusterer(cfg);
-    clusterer.do_clustering(faces_reduced, tracklets, &cluster_ids);
+
+    // Since cv::kmeans() only accepts matrix in CV_32F, T should be converted.
+    T_float.create(T.size(), CV_32FC1);
+    T.convertTo(T_float, CV_32FC1);
+    clusterer.do_clustering(T_float, tracklets, &cluster_ids);
+
+    // == End of normalized spectral clustering. ==============================
 
     // Writes the visualization of result of clustering to multiple files.
     ugproj::FaceClustersVisualizer visualizer(cfg, &writer);

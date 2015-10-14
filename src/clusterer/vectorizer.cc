@@ -147,4 +147,71 @@ void FlandmarkVectorizer::compute_lbp_hist(const cv::Mat& img, cv::Mat& hist) {
   hist /= img.rows * img.cols;
 }
 
+EigenfaceVectorizer::EigenfaceVectorizer(const Configuration& cfg) {
+  this->face_size_ = cfg.output.face_size;
+}
+
+cv::Mat EigenfaceVectorizer::vectorize(
+    const std::vector<ugproj::FaceTracklet>& tracklets) {
+  std::vector<cv::Mat> faceSet;
+  std::vector<int> labelSet;
+
+  // Change to grey scale image
+  int faceCnt = 0;
+  for(ugproj::FaceTracklet tracklet : tracklets){
+    const auto iterators = tracklet.face_iterators();
+    for(auto it = iterators.first; it != iterators.second; ++it){
+      const ugproj::Face& f = *it;
+      cv::Mat greyFace, colorFace;
+      colorFace = f.get_image();
+      cv::cvtColor(colorFace, greyFace, CV_BGR2GRAY);
+
+      faceSet.push_back(greyFace);
+      labelSet.push_back(faceCnt++);
+    }
+  }
+
+  // Find EigenFace
+  cv::Ptr<cv::FaceRecognizer> model = cv::createEigenFaceRecognizer();
+  model->train(faceSet, labelSet);
+
+  cv::Mat eigenvalues = model->getMat("eigenvalues");
+  cv::Mat W = model->getMat("eigenvectors");
+  cv::Mat mean = model->getMat("mean");
+
+  // Convert the face images into a (n x d) matrix.
+
+  // Number of face images.
+  const auto n_faces = faceSet.size();
+  // Length of one side of face images.
+  const auto len_side = this->face_size_;
+  // Dimensionality of (reshaped) samples.
+  const auto d = len_side * len_side;
+  // resulting data matrix
+  cv::Mat faces(n_faces, d, CV_64FC1);
+  for (size_t i = 0; i < n_faces; ++i) {
+    // A row of matrix faces where convert result should be stored.
+    if (faceSet[i].empty()) {
+      std::string error_message = cv::format("Image number %d was empty",i);
+      CV_Error(CV_StsBadArg, error_message);
+    }
+    if (faceSet[i].total() != d) {
+      std::string error_message = cv::format("Wrong number of elements in matrix #%d!",i);
+      CV_Error(CV_StsBadArg, error_message);
+    }
+    cv::Mat xi = faces.row(i);
+    if (faceSet[i].isContinuous()) {
+      faceSet[i].reshape(1, 1).convertTo(xi, CV_64FC1);
+    } else {
+      faceSet[i].clone().reshape(1, 1).convertTo(xi, CV_64FC1);
+    }
+  }
+
+  // Compute weights for eigenvectors of faces.
+  cv::Mat evs = cv::Mat(W, cv::Range::all(), cv::Range(0, std::min(W.cols, 32)));
+  cv::Mat weights = faces * evs;
+
+  return weights;
+}
+
 }   // namespace ugproj

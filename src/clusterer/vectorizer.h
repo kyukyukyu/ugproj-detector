@@ -48,6 +48,18 @@ class FlandmarkVectorizer : public FaceVectorizer {
     FLANDMARK_Model* flm_model_;
 };
 
+// Represents each of faces in weight vectors of Eigenfaces.
+class EigenfaceVectorizer : public FaceVectorizer {
+  public:
+    // Constructor. Loads configuration object.
+    EigenfaceVectorizer(const Configuration& cfg);
+    // Represents each of faces in tracklets in vector.
+    cv::Mat vectorize(const std::vector<ugproj::FaceTracklet>& tracklets);
+  private:
+    /* The side length of face images. */
+    unsigned int face_size_;
+};
+
 }   // namespace ugproj
 
 #endif  // UGPROJ_CLUSTERER_VECTORIZER_H_
