@@ -72,10 +72,6 @@ int main(int argc, const char** argv) {
       }
     }
 
-    int height = faceSet[0].rows;
-    cv::Mat testSample = faceSet[faceSet.size()-1];
-    int testLabel = labelSet[faceSet.size()-1];
-
     // Find EigenFace
     cv::Ptr<cv::FaceRecognizer> model = cv::createEigenFaceRecognizer();
     model->train(faceSet, labelSet);
@@ -84,69 +80,42 @@ int main(int argc, const char** argv) {
     cv::Mat W = model->getMat("eigenvectors");
     cv::Mat mean = model->getMat("mean");
 
-    std::cout << "eigenvalues " << eigenvalues.size() << " eigenvectors " << W.size() << W.type() << std::endl;
+    // Convert the face images into a (n x d) matrix.
 
-    std::cout << "eigenvector cols " << W.cols << std::endl;
-    // Display Eigenfaces
-    for(int i=0;i<std::min(10,W.cols);i++){
-      cv::Mat ev = W.col(i).clone();
-
-      cv::Mat grayscale = norm_0_255(ev.reshape(1,height));
-      cv::Mat cgrayscale;
-      cv::applyColorMap(grayscale, cgrayscale, cv::COLORMAP_JET);
-      char filename[1024];
-      std::sprintf(filename,"eigenface_%d.png",i);
-      writer.write_image(cgrayscale,filename);
-    }
-
-    // Display the image reconstruction
-    for(int num_components = std::min(W.cols, 10); num_components < std::min(W.cols, 300); num_components += 15){
-      cv::Mat evs = cv::Mat(W, cv::Range::all(), cv::Range(0,num_components));
-      cv::Mat projection = subspaceProject(evs, mean, faceSet[0].reshape(1,1));
-      cv::Mat reconstruction = subspaceReconstruct(evs, mean, projection);
-
-      reconstruction = norm_0_255(reconstruction.reshape(1, height));
-      char filename[1024];
-      std::sprintf(filename,"eigenface_reconstruction_%d.png",num_components);
-      writer.write_image(reconstruction,filename);
-    }
-
-    // Converts the images into a (n x d) matrix
-    int rtype = CV_64FC1;
-    double alpha = 1, beta = 0;
-    // Number of samples
-    size_t n = faceSet.size();
-    // dimensionality of (reshaped) samples
-    size_t d = faceSet[0].total();
+    // Number of face images.
+    const auto n_faces = faceSet.size();
+    // Length of one side of face images.
+    const auto len_side = cfg.output.face_size;
+    // Dimensionality of (reshaped) samples.
+    const auto d = len_side * len_side;
     // resulting data matrix
-    cv::Mat faces(n, d, rtype);
-    int i;
-    for(i = 0; i < n; i++){
-      if(faceSet[i].empty()){
+    cv::Mat faces(n_faces, d, CV_64FC1);
+    for (size_t i = 0; i < n_faces; ++i) {
+      // A row of matrix faces where convert result should be stored.
+      if (faceSet[i].empty()) {
         std::string error_message = cv::format("Image number %d was empty",i);
         CV_Error(CV_StsBadArg, error_message);
       }
-      if(faceSet[i].total() != d){
+      if (faceSet[i].total() != d) {
         std::string error_message = cv::format("Wrong number of elements in matrix #%d!",i);
         CV_Error(CV_StsBadArg, error_message);
       }
       cv::Mat xi = faces.row(i);
-      if(faceSet[i].isContinuous()){
-        faceSet[i].reshape(1,1).convertTo(xi, rtype, alpha, beta);
-      }else{
-        faceSet[i].clone().reshape(1,1).convertTo(xi, rtype, alpha, beta);
+      if (faceSet[i].isContinuous()) {
+        faceSet[i].reshape(1, 1).convertTo(xi, CV_64FC1);
+      } else {
+        faceSet[i].clone().reshape(1, 1).convertTo(xi, CV_64FC1);
       }
     }
 
-    std::cout << "faces " << faces.size() << faces.type() << std::endl;
-
-    // Implement weight
+    // Compute weights for eigenvectors of faces.
     cv::Mat weights = faces * W;
-    std::cout << "weights " << weights.size() << " cols " << weights.cols << std::endl;
 
     // Compute affinity matrix.
+
+    // Affinity matrix.
     cv::Mat affinity;
-    affinity.create(weights.rows, weights.rows, CV_64FC1);
+    affinity.create(n_faces, n_faces, CV_64FC1);
     for (int i = 0; i < weights.rows; ++i) {
       affinity.at<double>(i, i) = 0.0;
       for (int j = i + 1; j < weights.rows; ++j) {
@@ -213,7 +182,7 @@ int main(int argc, const char** argv) {
     T.create(U.size(), CV_64FC1);
     T_row.create(1, U.cols, CV_64FC1);
     // L2-normalize each row of U and stores them into T.
-    for (i = U.rows - 1; i >= 0; --i) {
+    for (int i = U.rows - 1; i >= 0; --i) {
       cv::normalize(U.row(i), T_row);
       T_row.copyTo(T.row(i));
     }
