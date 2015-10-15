@@ -117,7 +117,7 @@ int main(int argc, const char** argv) {
     // Affinity matrix.
     cv::Mat affinity;
     // Parameter that controls the width of neighborhoods.
-    const double sigma = 600.0;
+    const double sigma = 2000.0;
     affinity.create(n_faces, n_faces, CV_64FC1);
     for (int i = 0; i < weights.rows; ++i) {
       affinity.at<double>(i, i) = 0.0;
